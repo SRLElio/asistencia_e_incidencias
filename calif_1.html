@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard General - Educación Física (1ro a 3ro ABC)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
+</head>
+<body class="bg-slate-100 font-sans text-slate-800 min-h-screen pb-12">
+
+    <header class="bg-emerald-700 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid fa-person-running text-3xl text-emerald-300"></i>
+                <div>
+                    <h1 class="text-2xl font-bold tracking-wide">Dashboard Educación Física</h1>
+                    <p class="text-xs text-emerald-200 flex items-center gap-1.5">
+                        <span id="estado-conexion-dot" class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span> 
+                        <span id="estado-conexion-texto">Verificando conexión...</span>
+                    </p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 bg-emerald-800 px-3 py-1.5 rounded-lg border border-emerald-600">
+                    <span class="text-xs font-semibold uppercase text-emerald-200">Sección:</span>
+                    <select id="select-seccion" onchange="cambiarSeccion(this.value)" class="bg-emerald-900 text-white font-bold text-sm px-2 py-1 rounded outline-none cursor-pointer">
+                        <optgroup label="Primer Año">
+                            <option value="1A">1er Año "A"</option>
+                            <option value="1B">1er Año "B"</option>
+                            <option value="1C">1er Año "C"</option>
+                        </optgroup>
+                        <optgroup label="Segundo Año">
+                            <option value="2A">2do Año "A"</option>
+                            <option value="2B">2do Año "B"</option>
+                            <option value="2C">2do Año "C"</option>
+                        </optgroup>
+                        <optgroup label="Tercer Año">
+                            <option value="3A">3er Año "A"</option>
+                            <option value="3B">3er Año "B"</option>
+                            <option value="3C">3er Año "C"</option>
+                        </optgroup>
+                    </select>
+                </div>
+
+                <button onclick="configurarDriveSheets()" class="bg-emerald-800 hover:bg-emerald-900 text-white px-3 py-1.5 rounded-lg border border-emerald-600 text-xs font-semibold flex items-center gap-1.5 transition shadow cursor-pointer" title="Configurar Enlace de Google Drive / Sheets">
+                    <i class="fa-solid fa-gear text-emerald-300"></i> Drive/Sheets
+                </button>
+            </div>
+
+            <nav class="flex bg-emerald-800 p-1 rounded-lg space-x-1 text-sm font-medium">
+                <button onclick="switchTab('registro')" id="btn-registro" class="px-4 py-2 rounded-md bg-emerald-600 text-white transition shadow">Registro Diario</button>
+                <button onclick="switchTab('evaluacion')" id="btn-evaluacion" class="px-4 py-2 rounded-md hover:bg-emerald-700 transition">Evaluación y Notas</button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 mt-8">
+        <section id="tab-registro" class="space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900">Registro Diario de Clase</h2>
+                        <p class="text-sm text-slate-500">Gestiona asistencia, indumentaria e incidencias por cada sección seleccionada.</p>
+                    </div>
+                    <div class="flex items-center gap-3 bg-slate-100 p-2 rounded-lg border border-slate-200">
+                        <button onclick="cambiarFechaDias(-1)" class="p-2 hover:bg-white rounded-md transition text-slate-600"><i class="fa-solid fa-chevron-left"></i></button>
+                        <input type="date" id="input-fecha-registro" onchange="renderRegistroDiario()" class="bg-transparent font-semibold text-slate-800 outline-none cursor-pointer">
+                        <button onclick="cambiarFechaDias(1)" class="p-2 hover:bg-white rounded-md transition text-slate-600"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <button onclick="descargarReporteDia()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition" title="Descargar datos del día en CSV">
+                            <i class="fa-solid fa-file-csv text-base"></i> Descargar Día
+                        </button>
+                        <button onclick="openModalMasivo()" class="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition" title="Ingresar de lista o imagen">
+                            <i class="fa-solid fa-file-arrow-up"></i> Ingreso Masivo
+                        </button>
+                        <button onclick="openModalEstudiante()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition">
+                            <i class="fa-solid fa-user-plus"></i> Estudiante
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-xs uppercase font-semibold text-slate-500">
+                                <th class="p-3 w-12">N°</th>
+                                <th class="p-3 w-48">Estudiante</th>
+                                <th class="p-3 text-center w-28">Asistencia (Día)</th>
+                                <th class="p-3 text-center w-28">Indumentaria</th>
+                                <th class="p-3">Incidencia del Estudiante</th>
+                                <th class="p-3 w-36">Estatus</th>
+                                <th class="p-3 text-center w-32">Total Asistencias</th>
+                                <th class="p-3 text-center w-32">Total Indumentaria</th>
+                                <th class="p-3 w-16">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-registro-body" class="divide-y divide-slate-100 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="tab-evaluacion" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900">Actividades Evaluativas y Suma de Indicadores</h2>
+                        <p class="text-sm text-slate-500">Evaluación formativa y sumativa por sección.</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2 bg-slate-100 p-2 rounded-lg border border-slate-200">
+                            <span class="text-xs font-bold text-slate-500 uppercase">Fecha:</span>
+                            <input type="date" id="input-fecha-evaluacion" onchange="renderEvaluacion()" class="bg-transparent font-semibold text-slate-800 outline-none cursor-pointer text-sm">
+                        </div>
+                        <button onclick="openModalActividad()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition">
+                            <i class="fa-solid fa-plus-circle"></i> Añadir Actividad
+                        </button>
+                    </div>
+                </div>
+
+                <div id="contenedor-actividades-config" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"></div>
+
+                <div class="border-t pt-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4">Matriz de Calificaciones Sumadas por Indicadores</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse" id="tabla-matriz-notas">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-slate-200 text-xs uppercase font-semibold text-slate-500" id="matriz-head"></tr>
+                            </thead>
+                            <tbody id="matriz-body" class="divide-y divide-slate-100 text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modales -->
+    <div id="modal-estudiante" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white w-full max-w-md rounded-xl p-6 shadow-xl">
+            <h3 class="text-lg font-bold mb-4" id="modal-estudiante-titulo">Agregar Nuevo Estudiante</h3>
+            <input type="hidden" id="edit-estudiante-id">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Nombre Completo</label>
+                    <input type="text" id="nuevo-nombre-estudiante" class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Ej. Pérez, Juan">
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button onclick="closeModal('modal-estudiante')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
+                <button onclick="guardarEstudiante()" class="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-semibold">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-masivo" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white w-full max-w-lg rounded-xl p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+            <h3 class="text-lg font-bold mb-2">Ingreso Masivo de Estudiantes</h3>
+            <p class="text-xs text-slate-500 mb-4">Pega una lista de nombres (uno por línea) o sube una imagen de la lista para OCR automático.</p>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">1. Pegar lista de texto</label>
+                    <textarea id="texto-masivo" rows="5" class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Pérez, Juan&#10;Gómez, María"></textarea>
+                </div>
+                <div class="border-t pt-4">
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">2. O subir imagen con la lista</label>
+                    <input type="file" id="imagen-masiva-input" accept="image/*" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer">
+                    <div id="ocr-estado" class="text-xs text-emerald-600 font-medium mt-1"></div>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button onclick="closeModal('modal-masivo')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
+                <button onclick="procesarIngresoMasivo()" class="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-semibold">Agregar Estudiantes</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-actividad" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white w-full max-w-lg rounded-xl p-6 shadow-xl">
+            <h3 class="text-lg font-bold mb-4" id="modal-actividad-titulo">Añadir Actividad Evaluativa</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Nombre de la Actividad</label>
+                    <input type="text" id="act-nombre" class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Ej. Circuito de Agilidad">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Fecha</label>
+                        <input type="date" id="act-fecha" class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Porcentaje Total (%)</label>
+                        <input type="number" id="act-ponderacion" class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Ej. 25">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Indicadores (Formato: Indicador:Puntos)</label>
+                    <textarea id="act-indicadores" rows="3" class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Ej. Velocidad:10, Coordinación:10"></textarea>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button onclick="closeModal('modal-actividad')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
+                <button onclick="guardarActividad()" class="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-semibold">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let seccionActual = '2A';
+        let datosSecciones = JSON.parse(localStorage.getItem('datosDashboardEdFisicaGeneral')) || {
+            '1A': { estudiantes: [], actividades: [], registroDiario: {}, calificaciones: {} },
+            '1B': { estudiantes: [], actividades: [], registroDiario: {}, calificaciones: {} },
+            '1C': { estudiantes: [], actividades: [], registroDiario: {}, calificaciones: {} },
+            '2A': { estudiantes: [], actividades: [], registroDiario: {}, calificaciones: {} },
+            '2B': { estudiantes: [], actividades: [], registroDiario: {}, calificaciones: {} },
+            '2C': { estudiantes: [], actividades: [], registroDiario: {}, calificaciones: {} },
+            '3A': { estudiantes: [], actividades: [], registroDiario: {}, calificaciones: {} },
+            '3B': { estudiantes: [], actividades: [], registroDiario: {}, calificaciones: {} },
+            '3C': { estudiantes: [], actividades: [], registroDiario: {}, calificaciones: {} }
+        };
+
+        function configurarDriveSheets() {
+            let urlActual = localStorage.getItem('googleScriptUrlEdFisicaGeneral') || '';
+            let nuevaUrl = prompt("Pega aquí la URL de la Web App de tu Google Apps Script:", urlActual);
+            if (nuevaUrl !== null) {
+                localStorage.setItem('googleScriptUrlEdFisicaGeneral', nuevaUrl.trim());
+                alert("¡Enlace guardado con éxito!");
+            }
+        }
+
+        function guardarEnLocalStorage() {
+            localStorage.setItem('datosDashboardEdFisicaGeneral', JSON.stringify(datosSecciones));
+            sincronizarAutomaticoGoogleSheets();
+        }
+
+        function verificarConexion() {
+            const dot = document.getElementById('estado-conexion-dot');
+            const texto = document.getElementById('estado-conexion-texto');
+            if (navigator.onLine) {
+                dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block animate-pulse";
+                texto.innerText = "Conectado (Sincronización Automática)";
+            } else {
+                dot.className = "w-2.5 h-2.5 rounded-full bg-amber-400 inline-block";
+                texto.innerText = "Modo Offline";
+            }
+        }
+
+        window.addEventListener('online', verificarConexion);
+        window.addEventListener('offline', verificarConexion);
+
+        function sincronizarAutomaticoGoogleSheets() {
+            if (!navigator.onLine) return; 
+            const scriptUrl = localStorage.getItem('googleScriptUrlEdFisicaGeneral');
+            if (!scriptUrl) return; 
+            const payload = { seccion: seccionActual, datos: datosSecciones[seccionActual] };
+            fetch(scriptUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(err => console.log(err));
+        }
+
+        const hoyIso = new Date().toISOString().split('T')[0];
+        document.getElementById('input-fecha-registro').value = hoyIso;
+        document.getElementById('input-fecha-evaluacion').value = hoyIso;
+        document.getElementById('act-fecha').value = hoyIso;
+        verificarConexion();
+
+        function cambiarSeccion(nuevaSeccion) {
+            seccionActual = nuevaSeccion;
+            document.getElementById('select-seccion').value = nuevaSeccion;
+            renderRegistroDiario();
+            renderEvaluacion();
+        }
+
+        function switchTab(tabId) {
+            ['registro', 'evaluacion'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+                document.getElementById(`btn-${t}`).classList.remove('bg-emerald-600', 'text-white', 'shadow');
+                document.getElementById(`btn-${t}`).classList.add('hover:bg-emerald-700');
+            });
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            document.getElementById(`btn-${tabId}`).classList.add('bg-emerald-600', 'text-white', 'shadow');
+            document.getElementById(`btn-${tabId}`).classList.remove('hover:bg-emerald-700');
+            if(tabId === 'registro') renderRegistroDiario();
+            if(tabId === 'evaluacion') renderEvaluacion();
+        }
+
+        function calcularAcumulados(estId) {
+            let sec = datosSecciones[seccionActual];
+            let asistidas = 0, indumentariaOk = 0, totalClasesValidas = 0;
+            
+            Object.keys(sec.registroDiario).forEach(fecha => {
+                let regEst = sec.registroDiario[fecha][estId];
+                if(regEst) {
+                    let tieneRegistro = regEst.asistencia === true || regEst.indumentaria === true || (regEst.incidencia && regEst.incidencia.trim() !== "") || regEst.estatus !== 'Sin incidencia';
+                    
+                    if (tieneRegistro) {
+                        totalClasesValidas++;
+                    }
+
+                    if(regEst.asistencia === true) asistidas++;
+                    if(regEst.indumentaria === true) indumentariaOk++;
+                }
+            });
+
+            let totalClases = totalClasesValidas > 0 ? totalClasesValidas : 0;
+            return { asistidas, indumentariaOk, totalClases };
+        }
+
+        function renderRegistroDiario() {
+            const fecha = document.getElementById('input-fecha-registro').value;
+            const tbody = document.getElementById('tabla-registro-body');
+            tbody.innerHTML = '';
+            let sec = datosSecciones[seccionActual];
+            
+            if(!sec.registroDiario[fecha]) {
+                sec.registroDiario[fecha] = {};
+                sec.estudiantes.forEach(est => {
+                    sec.registroDiario[fecha][est.id] = { asistencia: false, indumentaria: false, incidencia: '', estatus: 'Sin incidencia' };
+                });
+                guardarEnLocalStorage();
+            }
+
+            sec.estudiantes.forEach((est, index) => {
+                if(!sec.registroDiario[fecha][est.id]) {
+                    sec.registroDiario[fecha][est.id] = { asistencia: false, indumentaria: false, incidencia: '', estatus: 'Sin incidencia' };
+                }
+
+                const reg = sec.registroDiario[fecha][est.id];
+                const acum = calcularAcumulados(est.id);
+                
+                let colorEstatus = "bg-slate-100 text-slate-700 border-slate-200";
+                if(reg.estatus === 'Pendiente') colorEstatus = "bg-amber-100 text-amber-800 border-amber-300";
+                if(reg.estatus === 'Cerrada') colorEstatus = "bg-emerald-100 text-emerald-800 border-emerald-300";
+
+                tbody.innerHTML += `
+                    <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+                        <td class="p-3 font-semibold text-slate-500">${index + 1}</td>
+                        <td class="p-3 font-medium text-slate-900">${est.nombre}</td>
+                        <td class="p-3 text-center"><input type="checkbox" ${reg.asistencia ? 'checked' : ''} onchange="setRegistroVal(${est.id}, 'asistencia', this.checked)" class="w-5 h-5 accent-emerald-600 cursor-pointer"></td>
+                        <td class="p-3 text-center"><input type="checkbox" ${reg.indumentaria ? 'checked' : ''} onchange="setRegistroVal(${est.id}, 'indumentaria', this.checked)" class="w-5 h-5 accent-emerald-600 cursor-pointer"></td>
+                        <td class="p-3"><input type="text" value="${reg.incidencia}" onchange="setRegistroVal(${est.id}, 'incidencia', this.value)" placeholder="Incidencia..." class="w-full border rounded-lg p-1.5 text-xs outline-none bg-white"></td>
+                        <td class="p-3">
+                            <select onchange="setRegistroVal(${est.id}, 'estatus', this.value); renderRegistroDiario();" class="border rounded-lg p-1.5 text-xs font-semibold outline-none cursor-pointer ${colorEstatus}">
+                                <option value="Sin incidencia" ${reg.estatus === 'Sin incidencia' ? 'selected' : ''}>Sin incidencia</option>
+                                <option value="Pendiente" ${reg.estatus === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
+                                <option value="Cerrada" ${reg.estatus === 'Cerrada' ? 'selected' : ''}>Cerrada</option>
+                            </select>
+                        </td>
+                        <td class="p-3 text-center font-semibold text-emerald-700 bg-emerald-50/40">${acum.asistidas} / ${acum.totalClases}</td>
+                        <td class="p-3 text-center font-semibold text-teal-700 bg-teal-50/40">${acum.indumentariaOk} / ${acum.totalClases}</td>
+                        <td class="p-3 text-center">
+                            <button onclick="gestionarEstudiante(${est.id})" class="text-blue-500 hover:text-blue-700 text-xs px-1.5 py-1 cursor-pointer" title="Modificar nombre"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="eliminarEstudiante(${est.id})" class="text-rose-500 hover:text-rose-700 text-xs px-1.5 py-1 cursor-pointer" title="Eliminar estudiante"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function setRegistroVal(estId, campo, valor) {
+            const fecha = document.getElementById('input-fecha-registro').value;
+            let sec = datosSecciones[seccionActual];
+            if(!sec.registroDiario[fecha]) sec.registroDiario[fecha] = {};
+            if(!sec.registroDiario[fecha][estId]) sec.registroDiario[fecha][estId] = { asistencia: true, indumentaria: true, incidencia: '', estatus: 'Sin incidencia' };
+            sec.registroDiario[fecha][estId][campo] = valor;
+            guardarEnLocalStorage();
+            if(campo === 'asistencia' || campo === 'indumentaria') renderRegistroDiario();
+        }
+
+        function cambiarFechaDias(dias) {
+            const inputFecha = document.getElementById('input-fecha-registro');
+            const fechaActual = new Date(inputFecha.value);
+            fechaActual.setDate(fechaActual.getDate() + dias);
+            inputFecha.value = fechaActual.toISOString().split('T')[0];
+            renderRegistroDiario();
+        }
+
+        function descargarReporteDia() {
+            const fecha = document.getElementById('input-fecha-registro').value;
+            let sec = datosSecciones[seccionActual];
+
+            if (!sec || !sec.estudiantes || sec.estudiantes.length === 0) {
+                alert("No hay estudiantes en esta sección para descargar.");
+                return;
+            }
+
+            let csvContent = "\uFEFF"; // BOM para caracteres especiales en Excel
+            csvContent += `N°,Estudiante,Asistencia,Indumentaria,Incidencia,Estatus\n`;
+
+            sec.estudiantes.forEach((est, index) => {
+                let reg = (sec.registroDiario[fecha] && sec.registroDiario[fecha][est.id]) 
+                    ? sec.registroDiario[fecha][est.id] 
+                    : { asistencia: false, indumentaria: false, incidencia: '', estatus: 'Sin incidencia' };
+
+                let asist = reg.asistencia ? "PRESENTE" : "AUSENTE";
+                let indu = reg.indumentaria ? "COMPLETA" : "INCOMPLETA";
+                let inci = `"${(reg.incidencia || '').replace(/"/g, '""')}"`;
+                let estatus = reg.estatus || 'Sin incidencia';
+
+                csvContent += `${index + 1},"${est.nombre}",${asist},${indu},${inci},"${estatus}"\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `Registro_${seccionActual}_${fecha}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function openModalEstudiante() { 
+            document.getElementById('modal-estudiante-titulo').innerText = "Agregar Nuevo Estudiante (" + seccionActual + ")";
+            document.getElementById('edit-estudiante-id').value = "";
+            document.getElementById('nuevo-nombre-estudiante').value = "";
+            document.getElementById('modal-estudiante').classList.remove('hidden'); 
+        }
+
+        function openModalMasivo() {
+            document.getElementById('texto-masivo').value = "";
+            document.getElementById('imagen-masiva-input').value = "";
+            document.getElementById('ocr-estado').innerText = "";
+            document.getElementById('modal-masivo').classList.remove('hidden');
+        }
+
+        document.getElementById('imagen-masiva-input').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const estadoEl = document.getElementById('ocr-estado');
+            estadoEl.innerText = "Leyendo imagen con IA (OCR)...";
+            try {
+                const worker = await Tesseract.createWorker('spa');
+                const ret = await worker.recognize(file);
+                await worker.terminate();
+                document.getElementById('texto-masivo').value = ret.data.text;
+                estadoEl.innerText = "¡Texto extraído con éxito!";
+            } catch (err) {
+                estadoEl.innerText = "Error al procesar la imagen.";
+            }
+        });
+
+        function procesarIngresoMasivo() {
+            const texto = document.getElementById('texto-masivo').value.trim();
+            if(!texto) return alert("Ingresa texto o sube una imagen.");
+            let lineas = texto.split('\n');
+            let sec = datosSecciones[seccionActual];
+            let maxId = sec.estudiantes.length > 0 ? Math.max(...sec.estudiantes.map(e => e.id)) : 0;
+            let agregados = 0;
+            lineas.forEach(linea => {
+                let nombreLimpiado = linea.replace(/^\d+[\.\-\)]\s*/, '').trim();
+                if (nombreLimpiado.length > 2) {
+                    maxId++;
+                    sec.estudiantes.push({ id: maxId, nombre: nombreLimpiado });
+                    sec.calificaciones[maxId] = {};
+                    agregados++;
+                }
+            });
+            if (agregados > 0) {
+                guardarEnLocalStorage();
+                closeModal('modal-masivo');
+                renderRegistroDiario();
+                alert(`¡Se han agregado ${agregados} estudiantes a ${seccionActual}!`);
+            } else {
+                alert("No se detectaron nombres válidos.");
+            }
+        }
+
+        function gestionarEstudiante(id) {
+            let sec = datosSecciones[seccionActual];
+            let est = sec.estudiantes.find(e => e.id === id);
+            if(!est) return;
+
+            document.getElementById('modal-estudiante-titulo').innerText = "Modificar Estudiante";
+            document.getElementById('edit-estudiante-id').value = est.id;
+            document.getElementById('nuevo-nombre-estudiante').value = est.nombre;
+            document.getElementById('modal-estudiante').classList.remove('hidden');
+        }
+
+        function eliminarEstudiante(id) {
+            let sec = datosSecciones[seccionActual];
+            let est = sec.estudiantes.find(e => e.id === id);
+            if(!est) return;
+
+            if(confirm(`¿Confirmas que deseas eliminar permanentemente a "${est.nombre}" y todo su historial de asistencia?`)) {
+                sec.estudiantes = sec.estudiantes.filter(e => e.id !== id);
+                delete sec.calificaciones[id];
+                Object.keys(sec.registroDiario).forEach(fecha => {
+                    if (sec.registroDiario[fecha][id]) {
+                        delete sec.registroDiario[fecha][id];
+                    }
+                });
+
+                guardarEnLocalStorage();
+                renderRegistroDiario();
+            }
+        }
+
+        function guardarEstudiante() {
+            const nombre = document.getElementById('nuevo-nombre-estudiante').value;
+            const editId = document.getElementById('edit-estudiante-id').value;
+            if(!nombre) return alert('Ingresa el nombre.');
+            let sec = datosSecciones[seccionActual];
+            if(editId) {
+                let est = sec.estudiantes.find(e => e.id == editId);
+                if(est) est.nombre = nombre;
+            } else {
+                const nuevoId = sec.estudiantes.length > 0 ? Math.max(...sec.estudiantes.map(e => e.id)) + 1 : 1;
+                sec.estudiantes.push({ id: nuevoId, nombre });
+                sec.calificaciones[nuevoId] = {};
+            }
+            guardarEnLocalStorage();
+            closeModal('modal-estudiante');
+            renderRegistroDiario();
+        }
+
+        function actualizarNota(estId, actId, indNombre, valor) {
+            let sec = datosSecciones[seccionActual];
+            if (!sec.calificaciones[estId]) sec.calificaciones[estId] = {};
+            if (!sec.calificaciones[estId][actId]) sec.calificaciones[estId][actId] = {};
+            sec.calificaciones[estId][actId][indNombre] = Number(valor);
+            guardarEnLocalStorage();
+            renderEvaluacion();
+        }
+
+        function eliminarActividad(actId) {
+            if(!confirm("¿Deseas eliminar esta actividad evaluativa?")) return;
+            let sec = datosSecciones[seccionActual];
+            sec.actividades = sec.actividades.filter(a => a.id !== actId);
+            guardarEnLocalStorage();
+            renderEvaluacion();
+        }
+
+        function openModalActividad() {
+            document.getElementById('act-nombre').value = "";
+            document.getElementById('act-ponderacion').value = "";
+            document.getElementById('act-indicadores').value = "";
+            document.getElementById('modal-actividad').classList.remove('hidden');
+        }
+
+        function guardarActividad() {
+            const nombre = document.getElementById('act-nombre').value.trim();
+            const fecha = document.getElementById('act-fecha').value;
+            const ponderacion = Number(document.getElementById('act-ponderacion').value);
+            const textoIndicadores = document.getElementById('act-indicadores').value.trim();
+
+            if (!nombre || !fecha || !ponderacion || !textoIndicadores) {
+                return alert("Por favor, completa todos los campos de la actividad.");
+            }
+
+            let indicadores = [];
+            textoIndicadores.split(',').forEach(item => {
+                let partes = item.split(':');
+                if (partes.length === 2) {
+                    indicadores.push({
+                        nombre: partes[0].trim(),
+                        max: Number(partes[1].trim())
+                    });
+                }
+            });
+
+            if (indicadores.length === 0) {
+                return alert("El formato de los indicadores es incorrecto. Usa: Nombre:Puntos, Nombre:Puntos");
+            }
+
+            let sec = datosSecciones[seccionActual];
+            const nuevaActId = 'act_' + Date.now();
+            sec.actividades.push({
+                id: nuevaActId,
+                nombre: nombre,
+                fecha: fecha,
+                ponderacion: ponderacion,
+                indicadores: indicadores
+            });
+
+            guardarEnLocalStorage();
+            closeModal('modal-actividad');
+            renderEvaluacion();
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        function renderEvaluacion() {
+            const fechaFiltro = document.getElementById('input-fecha-evaluacion').value;
+            const contConfig = document.getElementById('contenedor-actividades-config');
+            contConfig.innerHTML = '';
+            let sec = datosSecciones[seccionActual];
+            const actividadesFiltradas = sec.actividades.filter(a => a.fecha === fechaFiltro);
+            
+            if(actividadesFiltradas.length === 0) {
+                contConfig.innerHTML = `<div class="col-span-3 text-center py-6 text-slate-400 text-sm">No hay actividades en esta fecha para ${seccionActual}.</div>`;
+            }
+            
+            actividadesFiltradas.forEach(act => {
+                const indHTML = act.indicadores.map(i => `<div class="text-xs text-slate-600 bg-white px-2 py-1 rounded border mb-1 flex justify-between"><span>${i.nombre}</span><span class="font-bold">Max: ${i.max} pts</span></div>`).join('');
+                contConfig.innerHTML += `
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-start mb-2">
+                                <h4 class="font-bold text-slate-800 text-sm">${act.nombre}</h4>
+                                <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-0.5 rounded-full">${act.ponderacion}%</span>
+                            </div>
+                            <div class="mb-3 space-y-1">${indHTML}</div>
+                        </div>
+                        <button onclick="eliminarActividad('${act.id}')" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-medium py-1.5 rounded border border-rose-200 transition"><i class="fa-solid fa-trash mr-1"></i> Eliminar</button>
+                    </div>
+                `;
+            });
+
+            const thead = document.getElementById('matriz-head');
+            const tbody = document.getElementById('matriz-body');
+            let headHTML = `<th class="p-3">Estudiante</th>`;
+            actividadesFiltradas.forEach(act => { headHTML += `<th class="p-3 text-center">${act.nombre} (${act.ponderacion}%)</th>`; });
+            headHTML += `<th class="p-3 text-center bg-emerald-50 text-emerald-900">Total Ponderado</th>`;
+            thead.innerHTML = headHTML;
+
+            tbody.innerHTML = '';
+            sec.estudiantes.forEach(est => {
+                let rowHTML = `<td class="p-3 font-medium text-slate-900">${est.nombre}</td>`;
+                let notaPeriodo = 0;
+                
+                actividadesFiltradas.forEach(act => {
+                    if(!sec.calificaciones[est.id]) sec.calificaciones[est.id] = {};
+                    if(!sec.calificaciones[est.id][act.id]) sec.calificaciones[est.id][act.id] = {};
+                    let sumaEst = 0, maxAct = act.indicadores.reduce((s, i) => s + i.max, 0);
+                    
+                    let celdasInd = act.indicadores.map(ind => {
+                        let val = sec.calificaciones[est.id][act.id][ind.nombre] !== undefined ? sec.calificaciones[est.id][act.id][ind.nombre] : 0;
+                        sumaEst += Number(val);
+                        return `<div class="flex items-center justify-between gap-1 mb-1"><span class="text-[11px] text-slate-500">${ind.nombre} (${ind.max}):</span><input type="number" min="0" max="${ind.max}" value="${val}" onchange="actualizarNota(${est.id}, '${act.id}', '${ind.nombre}', this.value)" class="w-12 text-center border rounded p-0.5 text-xs bg-white"></div>`;
+                    }).join('');
+                    
+                    notaPeriodo += maxAct > 0 ? (sumaEst / maxAct) * act.ponderacion : 0;
+                    rowHTML += `<td class="p-3 text-center bg-white border-r"><div class="p-2 bg-slate-50 rounded-lg mb-1">${celdasInd}</div><span class="text-xs font-bold text-slate-700">Subtotal: ${sumaEst}/${maxAct}</span></td>`;
+                });
+                
+                rowHTML += `<td class="p-3 text-center font-bold text-emerald-700 bg-emerald-50/50">${notaPeriodo.toFixed(2)}%</td>`;
+                tbody.innerHTML += `<tr class="border-b border-slate-100 hover:bg-slate-50">${rowHTML}</tr>`;
+            });
+        }
+
+        // Inicializar vistas al cargar
+        renderRegistroDiario();
+    </script>
+</body>
+</html>
