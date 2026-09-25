@@ -1,0 +1,8 @@
+{
+  "short_name": "NotasEF",
+  "name": "Dashboard Educación Física",
+  "start_url": "./calif_1.html",
+  "display": "standalone",
+  "background_color": "#0d5c3a",
+  "theme_color": "#0d5c3a"
+}
