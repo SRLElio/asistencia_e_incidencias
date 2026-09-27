@@ -234,7 +234,7 @@
 
         function guardarEnLocalStorage() {
             localStorage.setItem('datosDashboardEdFisicaGeneral', JSON.stringify(datosSecciones));
-            sincronizarAutomaticoGoogleSheets();
+            guardarDatos({ seccion: seccionActual, datos: datosSecciones[seccionActual] });
         }
 
         function verificarConexion() {
@@ -249,15 +249,47 @@
             }
         }
 
-        window.addEventListener('online', verificarConexion);
+        function enviarAGoogleSheets(payloadData) {
+            const scriptUrl = localStorage.getItem('googleScriptUrlEdFisicaGeneral');
+            if (!scriptUrl) return Promise.resolve(); 
+            return fetch(scriptUrl, { 
+                method: 'POST', 
+                mode: 'no-cors', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(payloadData) 
+            }).catch(err => console.log(err));
+        }
+
+        function guardarDatos(payloadData) {
+            if (navigator.onLine) {
+                enviarAGoogleSheets(payloadData);
+            } else {
+                let pendientes = JSON.parse(localStorage.getItem('cola_offline') || "[]");
+                pendientes.push(payloadData);
+                localStorage.setItem('cola_offline', JSON.stringify(pendientes));
+            }
+        }
+
+        function sincronizarPendientes() {
+            verificarConexion();
+            let pendientes = JSON.parse(localStorage.getItem('cola_offline') || "[]");
+            if (pendientes.length === 0) return;
+
+            Promise.all(pendientes.map(item => enviarAGoogleSheets(item)))
+                .then(() => {
+                    localStorage.removeItem('cola_offline');
+                    alert("¡Conexión restablecida! Todas las notas tomadas offline se sincronizaron con Google Sheets.");
+                })
+                .catch(err => console.error("Error al sincronizar pendientes:", err));
+        }
+
+        window.addEventListener('online', sincronizarPendientes);
         window.addEventListener('offline', verificarConexion);
 
-        function sincronizarAutomaticoGoogleSheets() {
-            if (!navigator.onLine) return; 
-            const scriptUrl = localStorage.getItem('googleScriptUrlEdFisicaGeneral');
-            if (!scriptUrl) return; 
-            const payload = { seccion: seccionActual, datos: datosSecciones[seccionActual] };
-            fetch(scriptUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(err => console.log(err));
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch(err => console.error('Error al registrar SW:', err));
+            });
         }
 
         const hoyIso = new Date().toISOString().split('T')[0];
@@ -386,7 +418,7 @@
                 return;
             }
 
-            let csvContent = "\uFEFF"; // BOM para caracteres especiales en Excel
+            let csvContent = "\uFEFF";
             csvContent += `N°,Estudiante,Asistencia,Indumentaria,Incidencia,Estatus\n`;
 
             sec.estudiantes.forEach((est, index) => {
@@ -643,41 +675,7 @@
             });
         }
 
-        // Inicializar vistas al cargar
         renderRegistroDiario();
     </script>
-<script>
-  // Activa el modo offline en el navegador
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js');
-  }
-
-  // Detecta si la tablet pierde o recupera la señal
-  window.addEventListener('online', sincronizarPendientes);
-  
-  function guardarDatos(datosAlumnos) {
-    if (navigator.onLine) {
-      // Si hay internet, manda los datos directo a tu servidor / Google Sheets
-      enviarAGoogleSheets(datosAlumnos);
-    } else {
-      // Si NO hay internet, lo guarda temporalmente dentro de la tablet
-      let pendientes = JSON.parse(localStorage.getItem('cola_offline') || "[]");
-      pendientes.push(datosAlumnos);
-      localStorage.setItem('cola_offline', JSON.stringify(pendientes));
-      alert("Guardado localmente en la tablet (sin conexión). Se enviará al conectar a Wi-Fi.");
-    }
-  }
-
-  function sincronizarPendientes() {
-    let pendientes = JSON.parse(localStorage.getItem('cola_offline') || "[]");
-    if (pendientes.length === 0) return;
-
-    // Envía la lista acumulada cuando vuelve la conexión
-    enviarAGoogleSheets(pendientes).then(() => {
-      localStorage.removeItem('cola_offline');
-      alert("¡Conexión restablecida! Todas las notas tomadas offline se sincronizaron con Google Sheets.");
-    });
-  }
-</script>
 </body>
 </html>
