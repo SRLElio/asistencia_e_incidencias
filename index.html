@@ -8,6 +8,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
+
+    <!-- SDKs de Firebase v8 -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body class="bg-slate-100 font-sans text-slate-800 min-h-screen pb-12">
 
@@ -211,6 +215,17 @@
     </div>
 
     <script>
+        // --- CONFIGURACIÓN DE FIREBASE ---
+        const firebaseConfig = {
+            databaseURL: "https://asist-eval-educ-fisica-default-rtdb.firebaseio.com"
+        };
+
+        let db = null;
+        if (typeof firebase !== 'undefined') {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+        }
+
         let seccionActual = '2A';
         let datosSecciones = JSON.parse(localStorage.getItem('datosDashboardEdFisicaGeneral')) || {
             '1A': { estudiantes: [], actividades: [], registroDiario: {}, calificaciones: {} },
@@ -224,6 +239,20 @@
             '3C': { estudiantes: [], actividades: [], registroDiario: {}, calificaciones: {} }
         };
 
+        // Escuchar cambios en tiempo real desde Firebase
+        function iniciarEscuchadorFirebase() {
+            if (!db) return;
+            db.ref('datosSecciones').on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    datosSecciones = data;
+                    localStorage.setItem('datosDashboardEdFisicaGeneral', JSON.stringify(datosSecciones));
+                    renderRegistroDiario();
+                    renderEvaluacion();
+                }
+            });
+        }
+
         function configurarDriveSheets() {
             let urlActual = localStorage.getItem('googleScriptUrlEdFisicaGeneral') || '';
             let nuevaUrl = prompt("Pega aquí la URL de la Web App de tu Google Apps Script:", urlActual);
@@ -235,6 +264,12 @@
 
         function guardarEnLocalStorage() {
             localStorage.setItem('datosDashboardEdFisicaGeneral', JSON.stringify(datosSecciones));
+            
+            // Enviar a Firebase Realtime Database
+            if (db) {
+                db.ref('datosSecciones').set(datosSecciones);
+            }
+            
             guardarDatos({ seccion: seccionActual, datos: datosSecciones[seccionActual] });
         }
 
@@ -298,6 +333,7 @@
         document.getElementById('input-fecha-evaluacion').value = hoyIso;
         document.getElementById('act-fecha').value = hoyIso;
         verificarConexion();
+        iniciarEscuchadorFirebase();
 
         function cambiarSeccion(nuevaSeccion) {
             seccionActual = nuevaSeccion;
@@ -323,19 +359,21 @@
             let sec = datosSecciones[seccionActual];
             let asistidas = 0, indumentariaOk = 0, totalClasesValidas = 0;
             
-            Object.keys(sec.registroDiario).forEach(fecha => {
-                let regEst = sec.registroDiario[fecha][estId];
-                if(regEst) {
-                    let tieneRegistro = regEst.asistencia === true || regEst.indumentaria === true || (regEst.incidencia && regEst.incidencia.trim() !== "") || regEst.estatus !== 'Sin incidencia';
-                    
-                    if (tieneRegistro) {
-                        totalClasesValidas++;
-                    }
+            if (sec && sec.registroDiario) {
+                Object.keys(sec.registroDiario).forEach(fecha => {
+                    let regEst = sec.registroDiario[fecha][estId];
+                    if(regEst) {
+                        let tieneRegistro = regEst.asistencia === true || regEst.indumentaria === true || (regEst.incidencia && regEst.incidencia.trim() !== "") || regEst.estatus !== 'Sin incidencia';
+                        
+                        if (tieneRegistro) {
+                            totalClasesValidas++;
+                        }
 
-                    if(regEst.asistencia === true) asistidas++;
-                    if(regEst.indumentaria === true) indumentariaOk++;
-                }
-            });
+                        if(regEst.asistencia === true) asistidas++;
+                        if(regEst.indumentaria === true) indumentariaOk++;
+                    }
+                });
+            }
 
             let totalClases = totalClasesValidas > 0 ? totalClasesValidas : 0;
             return { asistidas, indumentariaOk, totalClases };
@@ -347,6 +385,8 @@
             tbody.innerHTML = '';
             let sec = datosSecciones[seccionActual];
             
+            if(!sec) return;
+
             if(!sec.registroDiario[fecha]) {
                 sec.registroDiario[fecha] = {};
                 sec.estudiantes.forEach(est => {
@@ -622,6 +662,8 @@
             const contConfig = document.getElementById('contenedor-actividades-config');
             contConfig.innerHTML = '';
             let sec = datosSecciones[seccionActual];
+            if(!sec) return;
+
             const actividadesFiltradas = sec.actividades.filter(a => a.fecha === fechaFiltro);
             
             if(actividadesFiltradas.length === 0) {
