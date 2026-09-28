@@ -8,10 +8,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
-
-    <!-- SDKs de Firebase v8 -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body class="bg-slate-100 font-sans text-slate-800 min-h-screen pb-12">
 
@@ -215,18 +211,7 @@
     </div>
 
     <script>
-        // --- CONFIGURACIÓN DE FIREBASE ---
-        const firebaseConfig = {
-            databaseURL: "https://asist-eval-educ-fisica-default-rtdb.firebaseio.com"
-        };
-
-        let db = null;
-        if (typeof firebase !== 'undefined') {
-            firebase.initializeApp(firebaseConfig);
-            db = firebase.database();
-        }
-
-        let seccionActual = '2A';
+        let seccionActual = '1B';
         let datosSecciones = JSON.parse(localStorage.getItem('datosDashboardEdFisicaGeneral')) || {
             '1A': { estudiantes: [], actividades: [], registroDiario: {}, calificaciones: {} },
             '1B': { estudiantes: [], actividades: [], registroDiario: {}, calificaciones: {} },
@@ -239,20 +224,6 @@
             '3C': { estudiantes: [], actividades: [], registroDiario: {}, calificaciones: {} }
         };
 
-        // Escuchar cambios en tiempo real desde Firebase
-        function iniciarEscuchadorFirebase() {
-            if (!db) return;
-            db.ref('datosSecciones').on('value', (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    datosSecciones = data;
-                    localStorage.setItem('datosDashboardEdFisicaGeneral', JSON.stringify(datosSecciones));
-                    renderRegistroDiario();
-                    renderEvaluacion();
-                }
-            });
-        }
-
         function configurarDriveSheets() {
             let urlActual = localStorage.getItem('googleScriptUrlEdFisicaGeneral') || '';
             let nuevaUrl = prompt("Pega aquí la URL de la Web App de tu Google Apps Script:", urlActual);
@@ -264,12 +235,6 @@
 
         function guardarEnLocalStorage() {
             localStorage.setItem('datosDashboardEdFisicaGeneral', JSON.stringify(datosSecciones));
-            
-            // Enviar a Firebase Realtime Database
-            if (db) {
-                db.ref('datosSecciones').set(datosSecciones);
-            }
-            
             guardarDatos({ seccion: seccionActual, datos: datosSecciones[seccionActual] });
         }
 
@@ -333,7 +298,6 @@
         document.getElementById('input-fecha-evaluacion').value = hoyIso;
         document.getElementById('act-fecha').value = hoyIso;
         verificarConexion();
-        iniciarEscuchadorFirebase();
 
         function cambiarSeccion(nuevaSeccion) {
             seccionActual = nuevaSeccion;
@@ -359,9 +323,9 @@
             let sec = datosSecciones[seccionActual];
             let asistidas = 0, indumentariaOk = 0, totalClasesValidas = 0;
             
-            if (sec && sec.registroDiario) {
+            if (sec.registroDiario) {
                 Object.keys(sec.registroDiario).forEach(fecha => {
-                    let regEst = sec.registroDiario[fecha][estId];
+                    let regEst = sec.registroDiario[fecha] ? sec.registroDiario[fecha][estId] : null;
                     if(regEst) {
                         let tieneRegistro = regEst.asistencia === true || regEst.indumentaria === true || (regEst.incidencia && regEst.incidencia.trim() !== "") || regEst.estatus !== 'Sin incidencia';
                         
@@ -384,9 +348,10 @@
             const tbody = document.getElementById('tabla-registro-body');
             tbody.innerHTML = '';
             let sec = datosSecciones[seccionActual];
-            
-            if(!sec) return;
 
+            if(!sec.registroDiario) sec.registroDiario = {};
+            if(!sec.estudiantes) sec.estudiantes = [];
+            
             if(!sec.registroDiario[fecha]) {
                 sec.registroDiario[fecha] = {};
                 sec.estudiantes.forEach(est => {
@@ -413,7 +378,7 @@
                         <td class="p-3 font-medium text-slate-900">${est.nombre}</td>
                         <td class="p-3 text-center"><input type="checkbox" ${reg.asistencia ? 'checked' : ''} onchange="setRegistroVal(${est.id}, 'asistencia', this.checked)" class="w-5 h-5 accent-emerald-600 cursor-pointer"></td>
                         <td class="p-3 text-center"><input type="checkbox" ${reg.indumentaria ? 'checked' : ''} onchange="setRegistroVal(${est.id}, 'indumentaria', this.checked)" class="w-5 h-5 accent-emerald-600 cursor-pointer"></td>
-                        <td class="p-3"><input type="text" value="${reg.incidencia}" onchange="setRegistroVal(${est.id}, 'incidencia', this.value)" placeholder="Incidencia..." class="w-full border rounded-lg p-1.5 text-xs outline-none bg-white"></td>
+                        <td class="p-3"><input type="text" value="${reg.incidencia || ''}" onchange="setRegistroVal(${est.id}, 'incidencia', this.value)" placeholder="Incidencia..." class="w-full border rounded-lg p-1.5 text-xs outline-none bg-white"></td>
                         <td class="p-3">
                             <select onchange="setRegistroVal(${est.id}, 'estatus', this.value); renderRegistroDiario();" class="border rounded-lg p-1.5 text-xs font-semibold outline-none cursor-pointer ${colorEstatus}">
                                 <option value="Sin incidencia" ${reg.estatus === 'Sin incidencia' ? 'selected' : ''}>Sin incidencia</option>
@@ -435,8 +400,9 @@
         function setRegistroVal(estId, campo, valor) {
             const fecha = document.getElementById('input-fecha-registro').value;
             let sec = datosSecciones[seccionActual];
+            if(!sec.registroDiario) sec.registroDiario = {};
             if(!sec.registroDiario[fecha]) sec.registroDiario[fecha] = {};
-            if(!sec.registroDiario[fecha][estId]) sec.registroDiario[fecha][estId] = { asistencia: true, indumentaria: true, incidencia: '', estatus: 'Sin incidencia' };
+            if(!sec.registroDiario[fecha][estId]) sec.registroDiario[fecha][estId] = { asistencia: false, indumentaria: false, incidencia: '', estatus: 'Sin incidencia' };
             sec.registroDiario[fecha][estId][campo] = valor;
             guardarEnLocalStorage();
             if(campo === 'asistencia' || campo === 'indumentaria') renderRegistroDiario();
@@ -463,7 +429,7 @@
             csvContent += `N°,Estudiante,Asistencia,Indumentaria,Incidencia,Estatus\n`;
 
             sec.estudiantes.forEach((est, index) => {
-                let reg = (sec.registroDiario[fecha] && sec.registroDiario[fecha][est.id]) 
+                let reg = (sec.registroDiario && sec.registroDiario[fecha] && sec.registroDiario[fecha][est.id]) 
                     ? sec.registroDiario[fecha][est.id] 
                     : { asistencia: false, indumentaria: false, incidencia: '', estatus: 'Sin incidencia' };
 
@@ -517,27 +483,50 @@
 
         function procesarIngresoMasivo() {
             const texto = document.getElementById('texto-masivo').value.trim();
-            if(!texto) return alert("Ingresa texto o sube una imagen.");
+            if (!texto) return alert("Ingresa texto o sube una imagen.");
+
             let lineas = texto.split('\n');
             let sec = datosSecciones[seccionActual];
-            let maxId = sec.estudiantes.length > 0 ? Math.max(...sec.estudiantes.map(e => e.id)) : 0;
+
+            if (!sec.estudiantes) sec.estudiantes = [];
+            if (!sec.calificaciones) sec.calificaciones = {};
+            if (!sec.registroDiario) sec.registroDiario = {};
+
+            const fechaActual = document.getElementById('input-fecha-registro').value;
+            if (fechaActual && !sec.registroDiario[fechaActual]) {
+                sec.registroDiario[fechaActual] = {};
+            }
+
+            const idsValidos = sec.estudiantes.map(e => Number(e.id)).filter(id => !isNaN(id));
+            let maxId = idsValidos.length > 0 ? Math.max(...idsValidos) : 0;
+
             let agregados = 0;
             lineas.forEach(linea => {
-                let nombreLimpiado = linea.replace(/^\d+[\.\-\)]\s*/, '').trim();
-                if (nombreLimpiado.length > 2) {
+                let nombreLimpiado = linea.replace(/^[\d\.\-\)\s]+/, '').trim();
+                if (nombreLimpiado.length >= 2) {
                     maxId++;
                     sec.estudiantes.push({ id: maxId, nombre: nombreLimpiado });
                     sec.calificaciones[maxId] = {};
+
+                    if (fechaActual && sec.registroDiario[fechaActual]) {
+                        sec.registroDiario[fechaActual][maxId] = {
+                            asistencia: false,
+                            indumentaria: false,
+                            incidencia: '',
+                            estatus: 'Sin incidencia'
+                        };
+                    }
                     agregados++;
                 }
             });
+
             if (agregados > 0) {
                 guardarEnLocalStorage();
                 closeModal('modal-masivo');
                 renderRegistroDiario();
-                alert(`¡Se han agregado ${agregados} estudiantes a ${seccionActual}!`);
+                alert(`¡Se han agregado ${agregados} estudiantes a la sección ${seccionActual}!`);
             } else {
-                alert("No se detectaron nombres válidos.");
+                alert("No se detectaron nombres válidos. Revisa el texto ingresado.");
             }
         }
 
@@ -559,12 +548,14 @@
 
             if(confirm(`¿Confirmas que deseas eliminar permanentemente a "${est.nombre}" y todo su historial de asistencia?`)) {
                 sec.estudiantes = sec.estudiantes.filter(e => e.id !== id);
-                delete sec.calificaciones[id];
-                Object.keys(sec.registroDiario).forEach(fecha => {
-                    if (sec.registroDiario[fecha][id]) {
-                        delete sec.registroDiario[fecha][id];
-                    }
-                });
+                if (sec.calificaciones) delete sec.calificaciones[id];
+                if (sec.registroDiario) {
+                    Object.keys(sec.registroDiario).forEach(fecha => {
+                        if (sec.registroDiario[fecha][id]) {
+                            delete sec.registroDiario[fecha][id];
+                        }
+                    });
+                }
 
                 guardarEnLocalStorage();
                 renderRegistroDiario();
@@ -572,17 +563,35 @@
         }
 
         function guardarEstudiante() {
-            const nombre = document.getElementById('nuevo-nombre-estudiante').value;
+            const nombre = document.getElementById('nuevo-nombre-estudiante').value.trim();
             const editId = document.getElementById('edit-estudiante-id').value;
-            if(!nombre) return alert('Ingresa el nombre.');
+            if(!nombre) return alert('Por favor, ingresa el nombre.');
+
             let sec = datosSecciones[seccionActual];
+            if(!sec.estudiantes) sec.estudiantes = [];
+            if(!sec.calificaciones) sec.calificaciones = {};
+            if(!sec.registroDiario) sec.registroDiario = {};
+
             if(editId) {
                 let est = sec.estudiantes.find(e => e.id == editId);
                 if(est) est.nombre = nombre;
             } else {
-                const nuevoId = sec.estudiantes.length > 0 ? Math.max(...sec.estudiantes.map(e => e.id)) + 1 : 1;
+                const idsValidos = sec.estudiantes.map(e => Number(e.id)).filter(id => !isNaN(id));
+                const nuevoId = idsValidos.length > 0 ? Math.max(...idsValidos) + 1 : 1;
+
                 sec.estudiantes.push({ id: nuevoId, nombre });
                 sec.calificaciones[nuevoId] = {};
+
+                const fechaActual = document.getElementById('input-fecha-registro').value;
+                if (fechaActual) {
+                    if (!sec.registroDiario[fechaActual]) sec.registroDiario[fechaActual] = {};
+                    sec.registroDiario[fechaActual][nuevoId] = {
+                        asistencia: false,
+                        indumentaria: false,
+                        incidencia: '',
+                        estatus: 'Sin incidencia'
+                    };
+                }
             }
             guardarEnLocalStorage();
             closeModal('modal-estudiante');
@@ -591,6 +600,7 @@
 
         function actualizarNota(estId, actId, indNombre, valor) {
             let sec = datosSecciones[seccionActual];
+            if (!sec.calificaciones) sec.calificaciones = {};
             if (!sec.calificaciones[estId]) sec.calificaciones[estId] = {};
             if (!sec.calificaciones[estId][actId]) sec.calificaciones[estId][actId] = {};
             sec.calificaciones[estId][actId][indNombre] = Number(valor);
@@ -639,6 +649,7 @@
             }
 
             let sec = datosSecciones[seccionActual];
+            if(!sec.actividades) sec.actividades = [];
             const nuevaActId = 'act_' + Date.now();
             sec.actividades.push({
                 id: nuevaActId,
@@ -662,7 +673,9 @@
             const contConfig = document.getElementById('contenedor-actividades-config');
             contConfig.innerHTML = '';
             let sec = datosSecciones[seccionActual];
-            if(!sec) return;
+            if(!sec.actividades) sec.actividades = [];
+            if(!sec.estudiantes) sec.estudiantes = [];
+            if(!sec.calificaciones) sec.calificaciones = {};
 
             const actividadesFiltradas = sec.actividades.filter(a => a.fecha === fechaFiltro);
             
@@ -718,6 +731,7 @@
             });
         }
 
+        // Carga inicial
         renderRegistroDiario();
     </script>
 </body>
