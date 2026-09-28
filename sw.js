@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dashboard-ef-v3';
+const CACHE_NAME = 'dashboard-ef-v5';
 const RECURSOS_ESTATICOS = [
   './',
   './index.html',

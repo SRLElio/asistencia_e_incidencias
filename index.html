@@ -41,7 +41,7 @@
                     <label for="select-seccion" class="text-xs uppercase tracking-wider font-semibold text-emerald-200 pl-1">Sección:</label>
                     <select id="select-seccion" onchange="cambiarSeccion(this.value)" class="bg-emerald-950 text-white font-bold text-sm rounded px-3 py-1 border border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-400">
                         <option value="1A">1er Año "A"</option>
-                        <option value="1B">1er Año "B"</option>
+                        <option value="1B" selected>1er Año "B"</option>
                         <option value="1C">1er Año "C"</option>
                         <option value="2A">2do Año "A"</option>
                         <option value="2B">2do Año "B"</option>
@@ -129,7 +129,7 @@
                     <h2 class="text-lg font-bold text-slate-800">Evaluación del Lapso</h2>
                     <p class="text-xs text-slate-500">Configura criterios y registra calificaciones de los estudiantes.</p>
                 </div>
-                <button onclick="openModal('modal-criterios')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded shadow transition flex items-center gap-1.5">
+                <button onclick="abrirModalCriterios()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded shadow transition flex items-center gap-1.5">
                     <i class="fa-solid fa-list-check"></i> Configurar Criterios
                 </button>
             </div>
@@ -138,7 +138,7 @@
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-sm">
                         <thead id="tabla-evaluacion-head" class="bg-slate-50 text-slate-500 font-semibold uppercase text-[11px] border-b border-slate-200">
-                            <!-- Inyección dinámica de cabeceras -->
+                            <!-- Inyección dinámica -->
                         </thead>
                         <tbody id="tabla-evaluacion-body" class="divide-y divide-slate-100">
                             <!-- Inyección dinámica -->
@@ -191,12 +191,28 @@
         </div>
     </div>
 
+    <!-- MODAL: CONFIGURAR CRITERIOS DE EVALUACIÓN -->
+    <div id="modal-criterios" class="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 space-y-4">
+            <h3 class="text-lg font-bold text-slate-800 border-b pb-2">Configurar Criterios de Evaluación</h3>
+            <div id="contenedor-criterios" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+                <!-- Inyección dinámica -->
+            </div>
+            <button onclick="agregarFilaCriterio()" class="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1">
+                <i class="fa-solid fa-plus"></i> Agregar Criterio
+            </button>
+            <div class="flex justify-end gap-2 pt-2 border-t">
+                <button onclick="closeModal('modal-criterios')" class="px-4 py-1.5 rounded-lg text-slate-600 bg-slate-100 hover:bg-slate-200 text-xs font-semibold">Cancelar</button>
+                <button onclick="guardarCriterios()" class="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold">Guardar Criterios</button>
+            </div>
+        </div>
+    </div>
+
     <!-- SCRIPT LÓGICA PRINCIPAL -->
     <script>
-        let seccionActual = '1A';
+        let seccionActual = '1B';
         let datosSecciones = {};
 
-        // Inicialización
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('fecha-registro').value = new Date().toISOString().split('T')[0];
             cargarDatosLocales();
@@ -206,21 +222,23 @@
                 document.getElementById('input-script-url').value = scriptUrl;
             }
 
-            // Service Worker Registration
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW error:', err));
             }
 
             renderRegistroDiario();
+            renderEvaluacion();
         });
 
         function asegurarEstructuraSeccion(sec) {
             if (!datosSecciones[sec]) {
-                datosSecciones[sec] = { estudiantes: [], registroDiario: {}, evaluaciones: {} };
+                datosSecciones[sec] = { estudiantes: [], registroDiario: {}, evaluaciones: { criterios: [], notas: {} } };
             }
             if (!datosSecciones[sec].estudiantes) datosSecciones[sec].estudiantes = [];
             if (!datosSecciones[sec].registroDiario) datosSecciones[sec].registroDiario = {};
-            if (!datosSecciones[sec].evaluaciones) datosSecciones[sec].evaluaciones = {};
+            if (!datosSecciones[sec].evaluaciones) datosSecciones[sec].evaluaciones = { criterios: [], notas: {} };
+            if (!datosSecciones[sec].evaluaciones.criterios) datosSecciones[sec].evaluaciones.criterios = [];
+            if (!datosSecciones[sec].evaluaciones.notas) datosSecciones[sec].evaluaciones.notas = {};
         }
 
         function cargarDatosLocales() {
@@ -240,7 +258,6 @@
             guardarDatosRemotos();
         }
 
-        // CARGA SEGURA SIN SOBREESCRIBIR DATOS LOCALES VACÍOS
         function cargarDatosSeccionCompleta(seccion) {
             const scriptUrl = localStorage.getItem('googleScriptUrlEdFisicaGeneral');
             if (!scriptUrl || !navigator.onLine) return;
@@ -254,8 +271,6 @@
                         localStorage.setItem('datosDashboardEdFisicaGeneral', JSON.stringify(datosSecciones));
                         renderRegistroDiario();
                         renderEvaluacion();
-                    } else {
-                        console.warn(`Sincronización omitida: Sin datos remotos para ${seccion}`);
                     }
                 })
                 .catch(err => console.error("Error cargando sección remota:", err));
@@ -298,7 +313,6 @@
             estudiantes.forEach((est, idx) => {
                 const reg = registroFecha[est.id] || { asistencia: false, indumentaria: false, incidencia: '', estatus: 'Sin incidencia' };
 
-                // Totales acumulados
                 let totalAsist = 0;
                 let totalInd = 0;
                 let totalDias = Object.keys(datosSecciones[seccionActual].registroDiario).length || 1;
@@ -355,7 +369,97 @@
         }
 
         function renderEvaluacion() {
-            // Estructura de vista de evaluación
+            asegurarEstructuraSeccion(seccionActual);
+            const estudiantes = datosSecciones[seccionActual].estudiantes;
+            const criterios = datosSecciones[seccionActual].evaluaciones.criterios || [];
+            const notas = datosSecciones[seccionActual].evaluaciones.notas || {};
+
+            const thead = document.getElementById('tabla-evaluacion-head');
+            const tbody = document.getElementById('tabla-evaluacion-body');
+
+            let headerHTML = `<tr><th class="p-3 w-12 text-center">Nº</th><th class="p-3">Estudiante</th>`;
+            criterios.forEach(crit => {
+                headerHTML += `<th class="p-3 text-center">${crit.nombre}<br><span class="text-[9px] text-slate-400">(${crit.porcentaje}%)</span></th>`;
+            });
+            headerHTML += `<th class="p-3 text-center w-24">Nota Final</th></tr>`;
+            thead.innerHTML = headerHTML;
+
+            tbody.innerHTML = '';
+            estudiantes.forEach((est, idx) => {
+                let trHTML = `<td class="p-3 text-center text-xs font-bold text-slate-400">${idx + 1}</td><td class="p-3 font-semibold text-slate-700">${est.nombre}</td>`;
+                let notaFinal = 0;
+
+                criterios.forEach(crit => {
+                    const notaVal = notas[est.id]?.[crit.id] || 0;
+                    notaFinal += (parseFloat(notaVal) || 0) * (parseFloat(crit.porcentaje) / 100);
+                    trHTML += `
+                        <td class="p-3 text-center">
+                            <input type="number" min="0" max="20" value="${notaVal}" onchange="guardarNota('${est.id}', '${crit.id}', this.value)" class="w-16 border rounded text-center py-1 text-xs focus:ring-1 focus:ring-blue-500">
+                        </td>
+                    `;
+                });
+
+                trHTML += `<td class="p-3 text-center font-bold text-sm text-emerald-800">${notaFinal.toFixed(1)}</td>`;
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition";
+                tr.innerHTML = trHTML;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function guardarNota(idEst, idCrit, valor) {
+            asegurarEstructuraSeccion(seccionActual);
+            if (!datosSecciones[seccionActual].evaluaciones.notas[idEst]) {
+                datosSecciones[seccionActual].evaluaciones.notas[idEst] = {};
+            }
+            datosSecciones[seccionActual].evaluaciones.notas[idEst][idCrit] = parseFloat(valor) || 0;
+            guardarEnLocalStorage();
+            renderEvaluacion();
+        }
+
+        function abrirModalCriterios() {
+            asegurarEstructuraSeccion(seccionActual);
+            const criterios = datosSecciones[seccionActual].evaluaciones.criterios || [];
+            const contenedor = document.getElementById('contenedor-criterios');
+            contenedor.innerHTML = '';
+
+            if (criterios.length === 0) {
+                agregarFilaCriterio();
+            } else {
+                criterios.forEach(c => agregarFilaCriterio(c.nombre, c.porcentaje));
+            }
+            openModal('modal-criterios');
+        }
+
+        function agregarFilaCriterio(nombre = '', porcentaje = '') {
+            const contenedor = document.getElementById('contenedor-criterios');
+            const div = document.createElement('div');
+            div.className = "flex items-center gap-2 modal-criterio-row";
+            div.innerHTML = `
+                <input type="text" value="${nombre}" placeholder="Ej: Servicio Voleibol" class="crit-nombre flex-grow border rounded p-1.5 text-xs focus:ring-1 focus:ring-blue-500">
+                <input type="number" value="${porcentaje}" placeholder="%" class="crit-porcentaje w-16 border rounded p-1.5 text-xs text-center focus:ring-1 focus:ring-blue-500">
+                <button onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-700 text-xs px-1"><i class="fa-solid fa-trash"></i></button>
+            `;
+            contenedor.appendChild(div);
+        }
+
+        function guardarCriterios() {
+            asegurarEstructuraSeccion(seccionActual);
+            const filas = document.querySelectorAll('.modal-criterio-row');
+            const nuevosCriterios = [];
+
+            filas.forEach((fila, i) => {
+                const nombre = fila.querySelector('.crit-nombre').value.trim();
+                const porcentaje = parseFloat(fila.querySelector('.crit-porcentaje').value) || 0;
+                if (nombre) {
+                    nuevosCriterios.push({ id: 'crit_' + (i + 1), nombre, porcentaje });
+                }
+            });
+
+            datosSecciones[seccionActual].evaluaciones.criterios = nuevosCriterios;
+            guardarEnLocalStorage();
+            closeModal('modal-criterios');
+            renderEvaluacion();
         }
 
         function cambiarFecha(dias) {
@@ -406,6 +510,7 @@
             closeModal('modal-masivo');
             document.getElementById('texto-masivo').value = '';
             renderRegistroDiario();
+            renderEvaluacion();
             alert(`Se agregaron ${agregados} estudiantes a la sección ${seccionActual}`);
         }
 
@@ -444,6 +549,7 @@
             guardarEnLocalStorage();
             closeModal('modal-estudiante');
             renderRegistroDiario();
+            renderEvaluacion();
         }
 
         function eliminarEstudiante(id) {
@@ -455,6 +561,7 @@
                 datosSecciones[seccionActual].estudiantes = datosSecciones[seccionActual].estudiantes.filter(e => e.id !== id);
                 guardarEnLocalStorage();
                 renderRegistroDiario();
+                renderEvaluacion();
             }
         }
 
