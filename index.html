@@ -226,7 +226,6 @@
 
         let datosSecciones = JSON.parse(localStorage.getItem('datosDashboardEdFisicaGeneral')) || estructurasBasicas;
 
-        // Validar e inicializar la estructura local
         Object.keys(estructurasBasicas).forEach(sec => {
             if (!datosSecciones[sec]) datosSecciones[sec] = estructurasBasicas[sec];
             if (!datosSecciones[sec].estudiantes) datosSecciones[sec].estudiantes = [];
@@ -318,6 +317,7 @@
                 .then(res => res.json())
                 .then(data => {
                     if (data && data.status === 'success' && data.datos) {
+                        // REEMPLAZO TOTAL: Forzar la sobreescritura exacta de los datos que vienen del servidor
                         datosSecciones[seccion] = data.datos;
                         asegurarEstructuraSeccion(seccion);
                         localStorage.setItem('datosDashboardEdFisicaGeneral', JSON.stringify(datosSecciones));
@@ -450,7 +450,7 @@
             
             sec.registroDiario[fecha][estId][campo] = valor;
             
-            // Forzar guardado local y sincronización remota
+            // Envío inmediato a la base de datos local y Google Sheets
             guardarEnLocalStorage();
 
             if(campo === 'asistencia' || campo === 'indumentaria') renderRegistroDiario();
