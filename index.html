@@ -212,7 +212,7 @@
 
     <script>
         let seccionActual = '1B';
-        let datosSecciones = JSON.parse(localStorage.getItem('datosDashboardEdFisicaGeneral')) || {
+        const estructurasBasicas = {
             '1A': { estudiantes: [], actividades: [], registroDiario: {}, calificaciones: {} },
             '1B': { estudiantes: [], actividades: [], registroDiario: {}, calificaciones: {} },
             '1C': { estudiantes: [], actividades: [], registroDiario: {}, calificaciones: {} },
@@ -223,6 +223,27 @@
             '3B': { estudiantes: [], actividades: [], registroDiario: {}, calificaciones: {} },
             '3C': { estudiantes: [], actividades: [], registroDiario: {}, calificaciones: {} }
         };
+
+        let datosSecciones = JSON.parse(localStorage.getItem('datosDashboardEdFisicaGeneral')) || estructurasBasicas;
+
+        // Validar y reparar estructuras si faltan
+        Object.keys(estructurasBasicas).forEach(sec => {
+            if (!datosSecciones[sec]) datosSecciones[sec] = estructurasBasicas[sec];
+            if (!datosSecciones[sec].estudiantes) datosSecciones[sec].estudiantes = [];
+            if (!datosSecciones[sec].actividades) datosSecciones[sec].actividades = [];
+            if (!datosSecciones[sec].registroDiario) datosSecciones[sec].registroDiario = {};
+            if (!datosSecciones[sec].calificaciones) datosSecciones[sec].calificaciones = {};
+        });
+
+        function asegurarEstructuraSeccion(sec) {
+            if (!datosSecciones[sec]) {
+                datosSecciones[sec] = { estudiantes: [], actividades: [], registroDiario: {}, calificaciones: {} };
+            }
+            if (!datosSecciones[sec].estudiantes) datosSecciones[sec].estudiantes = [];
+            if (!datosSecciones[sec].actividades) datosSecciones[sec].actividades = [];
+            if (!datosSecciones[sec].registroDiario) datosSecciones[sec].registroDiario = {};
+            if (!datosSecciones[sec].calificaciones) datosSecciones[sec].calificaciones = {};
+        }
 
         function configurarDriveSheets() {
             let urlActual = localStorage.getItem('googleScriptUrlEdFisicaGeneral') || '';
@@ -301,6 +322,7 @@
 
         function cambiarSeccion(nuevaSeccion) {
             seccionActual = nuevaSeccion;
+            asegurarEstructuraSeccion(seccionActual);
             document.getElementById('select-seccion').value = nuevaSeccion;
             renderRegistroDiario();
             renderEvaluacion();
@@ -323,7 +345,7 @@
             let sec = datosSecciones[seccionActual];
             let asistidas = 0, indumentariaOk = 0, totalClasesValidas = 0;
             
-            if (sec.registroDiario) {
+            if (sec && sec.registroDiario) {
                 Object.keys(sec.registroDiario).forEach(fecha => {
                     let regEst = sec.registroDiario[fecha] ? sec.registroDiario[fecha][estId] : null;
                     if(regEst) {
@@ -344,14 +366,12 @@
         }
 
         function renderRegistroDiario() {
+            asegurarEstructuraSeccion(seccionActual);
             const fecha = document.getElementById('input-fecha-registro').value;
             const tbody = document.getElementById('tabla-registro-body');
             tbody.innerHTML = '';
             let sec = datosSecciones[seccionActual];
 
-            if(!sec.registroDiario) sec.registroDiario = {};
-            if(!sec.estudiantes) sec.estudiantes = [];
-            
             if(!sec.registroDiario[fecha]) {
                 sec.registroDiario[fecha] = {};
                 sec.estudiantes.forEach(est => {
@@ -398,9 +418,9 @@
         }
 
         function setRegistroVal(estId, campo, valor) {
+            asegurarEstructuraSeccion(seccionActual);
             const fecha = document.getElementById('input-fecha-registro').value;
             let sec = datosSecciones[seccionActual];
-            if(!sec.registroDiario) sec.registroDiario = {};
             if(!sec.registroDiario[fecha]) sec.registroDiario[fecha] = {};
             if(!sec.registroDiario[fecha][estId]) sec.registroDiario[fecha][estId] = { asistencia: false, indumentaria: false, incidencia: '', estatus: 'Sin incidencia' };
             sec.registroDiario[fecha][estId][campo] = valor;
@@ -417,6 +437,7 @@
         }
 
         function descargarReporteDia() {
+            asegurarEstructuraSeccion(seccionActual);
             const fecha = document.getElementById('input-fecha-registro').value;
             let sec = datosSecciones[seccionActual];
 
@@ -481,16 +502,47 @@
             }
         });
 
+        function guardarEstudiante() {
+            const nombre = document.getElementById('nuevo-nombre-estudiante').value.trim();
+            const editId = document.getElementById('edit-estudiante-id').value;
+            if(!nombre) return alert('Por favor, ingresa el nombre.');
+
+            asegurarEstructuraSeccion(seccionActual);
+            let sec = datosSecciones[seccionActual];
+
+            if(editId) {
+                let est = sec.estudiantes.find(e => e.id == editId);
+                if(est) est.nombre = nombre;
+            } else {
+                const idsValidos = sec.estudiantes.map(e => Number(e.id)).filter(id => !isNaN(id));
+                const nuevoId = idsValidos.length > 0 ? Math.max(...idsValidos) + 1 : 1;
+
+                sec.estudiantes.push({ id: nuevoId, nombre });
+                sec.calificaciones[nuevoId] = {};
+
+                const fechaActual = document.getElementById('input-fecha-registro').value;
+                if (fechaActual) {
+                    if (!sec.registroDiario[fechaActual]) sec.registroDiario[fechaActual] = {};
+                    sec.registroDiario[fechaActual][nuevoId] = {
+                        asistencia: false,
+                        indumentaria: false,
+                        incidencia: '',
+                        estatus: 'Sin incidencia'
+                    };
+                }
+            }
+            guardarEnLocalStorage();
+            closeModal('modal-estudiante');
+            renderRegistroDiario();
+        }
+
         function procesarIngresoMasivo() {
             const texto = document.getElementById('texto-masivo').value.trim();
             if (!texto) return alert("Ingresa texto o sube una imagen.");
 
+            asegurarEstructuraSeccion(seccionActual);
             let lineas = texto.split('\n');
             let sec = datosSecciones[seccionActual];
-
-            if (!sec.estudiantes) sec.estudiantes = [];
-            if (!sec.calificaciones) sec.calificaciones = {};
-            if (!sec.registroDiario) sec.registroDiario = {};
 
             const fechaActual = document.getElementById('input-fecha-registro').value;
             if (fechaActual && !sec.registroDiario[fechaActual]) {
@@ -531,6 +583,7 @@
         }
 
         function gestionarEstudiante(id) {
+            asegurarEstructuraSeccion(seccionActual);
             let sec = datosSecciones[seccionActual];
             let est = sec.estudiantes.find(e => e.id === id);
             if(!est) return;
@@ -542,6 +595,7 @@
         }
 
         function eliminarEstudiante(id) {
+            asegurarEstructuraSeccion(seccionActual);
             let sec = datosSecciones[seccionActual];
             let est = sec.estudiantes.find(e => e.id === id);
             if(!est) return;
@@ -562,45 +616,9 @@
             }
         }
 
-        function guardarEstudiante() {
-            const nombre = document.getElementById('nuevo-nombre-estudiante').value.trim();
-            const editId = document.getElementById('edit-estudiante-id').value;
-            if(!nombre) return alert('Por favor, ingresa el nombre.');
-
-            let sec = datosSecciones[seccionActual];
-            if(!sec.estudiantes) sec.estudiantes = [];
-            if(!sec.calificaciones) sec.calificaciones = {};
-            if(!sec.registroDiario) sec.registroDiario = {};
-
-            if(editId) {
-                let est = sec.estudiantes.find(e => e.id == editId);
-                if(est) est.nombre = nombre;
-            } else {
-                const idsValidos = sec.estudiantes.map(e => Number(e.id)).filter(id => !isNaN(id));
-                const nuevoId = idsValidos.length > 0 ? Math.max(...idsValidos) + 1 : 1;
-
-                sec.estudiantes.push({ id: nuevoId, nombre });
-                sec.calificaciones[nuevoId] = {};
-
-                const fechaActual = document.getElementById('input-fecha-registro').value;
-                if (fechaActual) {
-                    if (!sec.registroDiario[fechaActual]) sec.registroDiario[fechaActual] = {};
-                    sec.registroDiario[fechaActual][nuevoId] = {
-                        asistencia: false,
-                        indumentaria: false,
-                        incidencia: '',
-                        estatus: 'Sin incidencia'
-                    };
-                }
-            }
-            guardarEnLocalStorage();
-            closeModal('modal-estudiante');
-            renderRegistroDiario();
-        }
-
         function actualizarNota(estId, actId, indNombre, valor) {
+            asegurarEstructuraSeccion(seccionActual);
             let sec = datosSecciones[seccionActual];
-            if (!sec.calificaciones) sec.calificaciones = {};
             if (!sec.calificaciones[estId]) sec.calificaciones[estId] = {};
             if (!sec.calificaciones[estId][actId]) sec.calificaciones[estId][actId] = {};
             sec.calificaciones[estId][actId][indNombre] = Number(valor);
@@ -610,6 +628,7 @@
 
         function eliminarActividad(actId) {
             if(!confirm("¿Deseas eliminar esta actividad evaluativa?")) return;
+            asegurarEstructuraSeccion(seccionActual);
             let sec = datosSecciones[seccionActual];
             sec.actividades = sec.actividades.filter(a => a.id !== actId);
             guardarEnLocalStorage();
@@ -648,8 +667,8 @@
                 return alert("El formato de los indicadores es incorrecto. Usa: Nombre:Puntos, Nombre:Puntos");
             }
 
+            asegurarEstructuraSeccion(seccionActual);
             let sec = datosSecciones[seccionActual];
-            if(!sec.actividades) sec.actividades = [];
             const nuevaActId = 'act_' + Date.now();
             sec.actividades.push({
                 id: nuevaActId,
@@ -669,13 +688,11 @@
         }
 
         function renderEvaluacion() {
+            asegurarEstructuraSeccion(seccionActual);
             const fechaFiltro = document.getElementById('input-fecha-evaluacion').value;
             const contConfig = document.getElementById('contenedor-actividades-config');
             contConfig.innerHTML = '';
             let sec = datosSecciones[seccionActual];
-            if(!sec.actividades) sec.actividades = [];
-            if(!sec.estudiantes) sec.estudiantes = [];
-            if(!sec.calificaciones) sec.calificaciones = {};
 
             const actividadesFiltradas = sec.actividades.filter(a => a.fecha === fechaFiltro);
             
