@@ -4,570 +4,219 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard General - Educación Física (1ro a 3ro ABC)</title>
-    <link rel="manifest" href="./manifest.json">
-    <meta name="theme-color" content="#15803d">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#00695c">
+    
+    <!-- FontAwesome y Estilos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .active-tab { border-bottom: 4px solid #15803d; color: #15803d; font-weight: bold; }
-        @media print {
-            body { background: white; color: black; }
-            .no-print { display: none !important; }
-            .print-only { display: block !important; }
-            .page-break { page-break-after: always; }
+        :root {
+            --primary-color: #00695c;
+            --accent-purple: #673ab7;
+            --bg-light: #f4f7f6;
         }
-        .print-only { display: none; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-light); margin: 0; padding: 0; }
+        .navbar { background-color: var(--primary-color); color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .navbar h1 { margin: 0; font-size: 1.2rem; display: flex; align-items: center; gap: 10px; }
+        .container { padding: 20px; }
+        .toolbar { background: white; padding: 15px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .btn { padding: 8px 15px; border: none; border-radius: 4px; color: white; cursor: pointer; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px; }
+        .btn-purple { background-color: var(--accent-purple); }
+        .table-container { background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th, td { padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0; }
+        th { color: #666; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; background: #fafafa; }
+        td.text-left { text-align: left; }
+        input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+        .incidencia-input { width: 90%; padding: 5px; border: 1px solid #ddd; border-radius: 4px; }
+        .estatus-select { padding: 5px; border: 1px solid #ddd; border-radius: 4px; }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col">
+<body>
 
-    <!-- BARRA SUPERIOR -->
-    <header class="bg-emerald-800 text-white shadow-md no-print">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
-            <div class="flex items-center space-x-3">
-                <i class="fa-solid fa-running text-3xl text-emerald-300"></i>
-                <div>
-                    <h1 class="text-xl font-bold leading-none">Dashboard Educación Física</h1>
-                    <span id="estado-conexion" class="text-xs text-emerald-200 flex items-center gap-1 mt-1">
-                        <i class="fa-solid fa-circle text-[10px] text-emerald-400"></i> Conectado (Sincronización Automática)
-                    </span>
-                </div>
-            </div>
-
-            <!-- SELECTOR DE SECCIÓN Y CONFIGURACIÓN -->
-            <div class="flex items-center gap-3">
-                <div class="bg-emerald-900/60 p-1.5 rounded-lg border border-emerald-700/50 flex items-center gap-2">
-                    <label for="select-seccion" class="text-xs uppercase tracking-wider font-semibold text-emerald-200 pl-1">Sección:</label>
-                    <select id="select-seccion" onchange="cambiarSeccion(this.value)" class="bg-emerald-950 text-white font-bold text-sm rounded px-3 py-1 border border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-400">
-                        <option value="1A">1er Año "A"</option>
-                        <option value="1B" selected>1er Año "B"</option>
-                        <option value="1C">1er Año "C"</option>
-                        <option value="2A">2do Año "A"</option>
-                        <option value="2B">2do Año "B"</option>
-                        <option value="2C">2do Año "C"</option>
-                        <option value="3A">3er Año "A"</option>
-                        <option value="3B">3er Año "B"</option>
-                        <option value="3C">3er Año "C"</option>
-                    </select>
-                </div>
-                
-                <button onclick="openModal('modal-config-script')" class="bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold px-3 py-2 rounded shadow transition flex items-center gap-1.5" title="Configurar enlace de Google Sheets">
-                    <i class="fa-solid fa-gear"></i> Drive/Sheets
-                </button>
-            </div>
-
-            <!-- NAVEGACIÓN PRINCIPAL -->
-            <nav class="flex bg-emerald-900/40 p-1 rounded-lg">
-                <button id="btn-tab-diario" onclick="switchTab('diario')" class="px-4 py-1.5 rounded-md text-sm font-medium transition active-tab bg-white text-emerald-900 shadow">Registro Diario</button>
-                <button id="btn-tab-evaluacion" onclick="switchTab('evaluacion')" class="px-4 py-1.5 rounded-md text-sm font-medium transition text-emerald-100 hover:bg-emerald-700/50">Evaluación y Notas</button>
-            </nav>
+    <!-- NAVBAR -->
+    <div class="navbar">
+        <div>
+            <h1><i class="fa-solid fa-person-running"></i> Dashboard Educación Física</h1>
+            <div id="statusConexion" style="font-size: 0.8rem; color: #a7ffeb;">● Verificando conexión...</div>
         </div>
-    </header>
-
-    <!-- CONTENIDO PRINCIPAL -->
-    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
-        
-        <!-- SECCIÓN 1: REGISTRO DIARIO -->
-        <section id="tab-diario" class="space-y-4">
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4 no-print">
-                <div>
-                    <h2 class="text-lg font-bold text-slate-800">Registro Diario de Clase</h2>
-                    <p class="text-xs text-slate-500">Gestiona asistencia, indumentaria e incidencias por cada sección seleccionada.</p>
-                </div>
-                
-                <div class="flex items-center gap-3 flex-wrap">
-                    <div class="flex items-center bg-slate-100 rounded-lg p-1 border border-slate-300">
-                        <button onclick="cambiarFecha(-1)" class="px-2 py-1 hover:bg-slate-200 rounded text-slate-600"><i class="fa-solid fa-chevron-left"></i></button>
-                        <input type="date" id="fecha-registro" onchange="renderRegistroDiario()" class="bg-transparent text-sm font-semibold text-slate-700 px-2 focus:outline-none">
-                        <button onclick="cambiarFecha(1)" class="px-2 py-1 hover:bg-slate-200 rounded text-slate-600"><i class="fa-solid fa-chevron-right"></i></button>
-                    </div>
-
-                    <button onclick="descargarReporteDiaPDF()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-2 rounded shadow transition flex items-center gap-1.5">
-                        <i class="fa-solid fa-file-pdf"></i> Descargar Día
-                    </button>
-
-                    <button onclick="openModal('modal-masivo')" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold px-3 py-2 rounded shadow transition flex items-center gap-1.5">
-                        <i class="fa-solid fa-user-plus"></i> Ingreso Masivo
-                    </button>
-
-                    <button onclick="abrirModalEstudiante()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-2 rounded shadow transition flex items-center gap-1.5">
-                        <i class="fa-solid fa-user-plus"></i> Estudiante
-                    </button>
-                </div>
-            </div>
-
-            <!-- TABLA DE REGISTRO DIARIO -->
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm">
-                        <thead class="bg-slate-50 text-slate-500 font-semibold uppercase text-[11px] border-b border-slate-200">
-                            <tr>
-                                <th class="p-3 w-12 text-center">Nº</th>
-                                <th class="p-3">Estudiante</th>
-                                <th class="p-3 text-center w-28">Asistencia<br><span class="text-[9px] text-slate-400 normal-case">(Día)</span></th>
-                                <th class="p-3 text-center w-28">Indumentaria</th>
-                                <th class="p-3 w-64">Incidencia del Estudiante</th>
-                                <th class="p-3 w-36">Estatus</th>
-                                <th class="p-3 text-center w-24">Total<br>Asistencias</th>
-                                <th class="p-3 text-center w-24">Total<br>Indumentaria</th>
-                                <th class="p-3 text-center w-20 no-print">Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabla-diaria-body" class="divide-y divide-slate-100">
-                            <!-- Inyección dinámica -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <!-- SECCIÓN 2: EVALUACIÓN Y NOTAS -->
-        <section id="tab-evaluacion" class="space-y-4 hidden">
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4 no-print">
-                <div>
-                    <h2 class="text-lg font-bold text-slate-800">Evaluación del Lapso</h2>
-                    <p class="text-xs text-slate-500">Configura criterios y registra calificaciones de los estudiantes.</p>
-                </div>
-                <button onclick="abrirModalCriterios()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded shadow transition flex items-center gap-1.5">
-                    <i class="fa-solid fa-list-check"></i> Configurar Criterios
-                </button>
-            </div>
-
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm">
-                        <thead id="tabla-evaluacion-head" class="bg-slate-50 text-slate-500 font-semibold uppercase text-[11px] border-b border-slate-200">
-                            <!-- Inyección dinámica -->
-                        </thead>
-                        <tbody id="tabla-evaluacion-body" class="divide-y divide-slate-100">
-                            <!-- Inyección dinámica -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <!-- MODAL: CONFIGURAR ENLACE SCRIPT -->
-    <div id="modal-config-script" class="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50 hidden">
-        <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
-            <h3 class="text-lg font-bold text-slate-800 border-b pb-2"><i class="fa-solid fa-link text-emerald-600"></i> Google Apps Script URL</h3>
-            <p class="text-xs text-slate-500">Pega aquí la URL de la Web App desplegada desde tu Google Sheets para habilitar la sincronización remota.</p>
-            <input type="text" id="input-script-url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-            <div class="flex justify-end gap-2 pt-2">
-                <button onclick="closeModal('modal-config-script')" class="px-4 py-1.5 rounded-lg text-slate-600 bg-slate-100 hover:bg-slate-200 text-xs font-semibold">Cancelar</button>
-                <button onclick="guardarUrlScript()" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Guardar URL</button>
-            </div>
+        <div>
+            <label style="font-size: 0.85rem;">SECCIÓN:</label>
+            <select id="selectSeccion" onchange="cambiarSeccion()" style="padding: 5px; border-radius: 4px;">
+                <option value="1B">1er Año "B"</option>
+                <option value="1A">1er Año "A"</option>
+            </select>
         </div>
     </div>
 
-    <!-- MODAL: INGRESO MASIVO -->
-    <div id="modal-masivo" class="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50 hidden">
-        <div class="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 space-y-4">
-            <h3 class="text-lg font-bold text-slate-800 border-b pb-2"><i class="fa-solid fa-users text-emerald-600"></i> Carga Masiva de Estudiantes</h3>
-            <p class="text-xs text-slate-500">Pega la lista de estudiantes (un nombre por línea):</p>
-            <textarea id="texto-masivo" rows="8" placeholder="ALVAREZ BERTORELLI, PIERINA VALENTINA&#10;AZOCAR CABALLERO, FABIANA ANDREA" class="w-full border rounded-lg p-3 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"></textarea>
-            <div class="flex justify-end gap-2 pt-2">
-                <button onclick="closeModal('modal-masivo')" class="px-4 py-1.5 rounded-lg text-slate-600 bg-slate-100 hover:bg-slate-200 text-xs font-semibold">Cancelar</button>
-                <button onclick="procesarIngresoMasivo()" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Agregar Estudiantes</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL: CREAR/EDITAR ESTUDIANTE -->
-    <div id="modal-estudiante" class="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50 hidden">
-        <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
-            <h3 id="modal-estudiante-titulo" class="text-lg font-bold text-slate-800 border-b pb-2">Agregar Estudiante</h3>
-            <input type="hidden" id="edit-estudiante-id">
+    <div class="container">
+        <!-- TOOLBAR -->
+        <div class="toolbar">
             <div>
-                <label class="text-xs font-semibold text-slate-600 uppercase">Nombre Completo</label>
-                <input type="text" id="nuevo-nombre-estudiante" class="w-full border rounded-lg p-2 text-sm mt-1 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                <h2 style="margin:0; font-size: 1.1rem;">Registro Diario de Clase</h2>
+                <p style="margin: 5px 0 0 0; font-size: 0.85rem; color: #666;">Gestiona asistencia, indumentaria e incidencias.</p>
             </div>
-            <div class="flex justify-end gap-2 pt-2">
-                <button onclick="closeModal('modal-estudiante')" class="px-4 py-1.5 rounded-lg text-slate-600 bg-slate-100 hover:bg-slate-200 text-xs font-semibold">Cancelar</button>
-                <button onclick="guardarEstudiante()" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Guardar</button>
+            <div>
+                <button class="btn btn-purple" onclick="guardarDatos()"><i class="fa-solid fa-floppy-disk"></i> Descargar Día</button>
             </div>
+        </div>
+
+        <!-- TABLA -->
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nº</th>
+                        <th class="text-left">ESTUDIANTE</th>
+                        <th>ASISTENCIA (Día)</th>
+                        <th>INDUMENTARIA</th>
+                        <th>INCIDENCIA DEL ESTUDIANTE</th>
+                        <th>ESTATUS</th>
+                        <th>TOTAL ASISTENCIAS</th>
+                        <th>TOTAL INDUMENTARIA</th>
+                        <th>ACCIÓN</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaBody">
+                    <!-- Se llena dinámicamente -->
+                </tbody>
+            </table>
         </div>
     </div>
 
-    <!-- MODAL: CONFIGURAR CRITERIOS DE EVALUACIÓN -->
-    <div id="modal-criterios" class="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50 hidden">
-        <div class="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 space-y-4">
-            <h3 class="text-lg font-bold text-slate-800 border-b pb-2">Configurar Criterios de Evaluación</h3>
-            <div id="contenedor-criterios" class="space-y-2 max-h-60 overflow-y-auto pr-1">
-                <!-- Inyección dinámica -->
-            </div>
-            <button onclick="agregarFilaCriterio()" class="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1">
-                <i class="fa-solid fa-plus"></i> Agregar Criterio
-            </button>
-            <div class="flex justify-end gap-2 pt-2 border-t">
-                <button onclick="closeModal('modal-criterios')" class="px-4 py-1.5 rounded-lg text-slate-600 bg-slate-100 hover:bg-slate-200 text-xs font-semibold">Cancelar</button>
-                <button onclick="guardarCriterios()" class="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold">Guardar Criterios</button>
-            </div>
-        </div>
-    </div>
+    <!-- Firebase SDKs (Versión 8 Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-    <!-- SCRIPT LÓGICA PRINCIPAL -->
     <script>
-        let seccionActual = '1B';
-        let datosSecciones = {};
+        // CONFIGURACIÓN DE FIREBASE
+        const firebaseConfig = {
+            apiKey: "AIzaSyAANlQ-ENyfm9ciNbQORdULTgYeCq_ibj4",
+            authDomain: "asist-eval-educ-fisica.firebaseapp.com",
+            databaseURL: "https://asist-eval-educ-fisica-default-rtdb.firebaseio.com",
+            projectId: "asist-eval-educ-fisica",
+            storageBucket: "asist-eval-educ-fisica.firebasestorage.app",
+            messagingSenderId: "556635399219",
+            appId: "1:556635399219:web:b8795630cc316751126f46",
+            measurementId: "G-ZGLYFL8TGM"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('fecha-registro').value = new Date().toISOString().split('T')[0];
-            cargarDatosLocales();
-            
-            const scriptUrl = localStorage.getItem('googleScriptUrlEdFisicaGeneral');
-            if (scriptUrl) {
-                document.getElementById('input-script-url').value = scriptUrl;
+        // Registrar Service Worker para modo offline en la cancha
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(err => console.error("Error SW:", err));
+        }
+
+        // Indicador de conexión en tiempo real
+        const statusDiv = document.getElementById('statusConexion');
+        db.ref(".info/connected").on("value", (snap) => {
+            if (snap.val() === true) {
+                statusDiv.innerHTML = '● Conectado (Sincronización Automática)';
+                statusDiv.style.color = '#a7ffeb';
+            } else {
+                statusDiv.innerHTML = '● Modo Offline (Cancha)';
+                statusDiv.style.color = '#ffb74d';
             }
-
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW error:', err));
-            }
-
-            renderRegistroDiario();
-            renderEvaluacion();
         });
 
-        function asegurarEstructuraSeccion(sec) {
-            if (!datosSecciones[sec]) {
-                datosSecciones[sec] = { estudiantes: [], registroDiario: {}, evaluaciones: { criterios: [], notas: {} } };
-            }
-            if (!datosSecciones[sec].estudiantes) datosSecciones[sec].estudiantes = [];
-            if (!datosSecciones[sec].registroDiario) datosSecciones[sec].registroDiario = {};
-            if (!datosSecciones[sec].evaluaciones) datosSecciones[sec].evaluaciones = { criterios: [], notas: {} };
-            if (!datosSecciones[sec].evaluaciones.criterios) datosSecciones[sec].evaluaciones.criterios = [];
-            if (!datosSecciones[sec].evaluaciones.notas) datosSecciones[sec].evaluaciones.notas = {};
+        // Listas de estudiantes por sección
+        const datosSecciones = {
+            "1B": [
+                "ALVAREZ BERTORELLI, PIERINA VALENTINA",
+                "ALVAREZ PATERNINA, AARON EZEQUIEL",
+                "AZOCAR CABALLERO, FABIANA ANDREA",
+                "CENTENO CASTILLO, JOSUE SEBASTIÁN",
+                "CONSTANT MONTAÑA, CAMILA N.",
+                "DE SOUSA PUZO, MARIANA NICOLE",
+                "DORTA DE BARROS, ANA VALERIA",
+                "FERNANDES GOMEZ, NATALIA MAYDELIN",
+                "GONZÁLEZ ANZOLA, KAMILA VALENTINA",
+                "GONZALEZ AZUAJE, SOFIA MARGARITA"
+            ],
+            "1A": [
+                "ESTUDIANTE EJEMPLO 1",
+                "ESTUDIANTE EJEMPLO 2"
+            ]
+        };
+
+        function cambiarSeccion() {
+            renderizarTabla();
         }
 
-        function cargarDatosLocales() {
-            const guardado = localStorage.getItem('datosDashboardEdFisicaGeneral');
-            if (guardado) {
-                try {
-                    datosSecciones = JSON.parse(guardado);
-                } catch (e) {
-                    datosSecciones = {};
-                }
-            }
-            asegurarEstructuraSeccion(seccionActual);
-        }
+        function renderizarTabla() {
+            const seccion = document.getElementById('selectSeccion').value;
+            const lista = datosSecciones[seccion] || [];
+            const tbody = document.getElementById('tablaBody');
+            
+            // Cargar datos guardados previamente de la tablet
+            const guardados = JSON.parse(localStorage.getItem('asist_' + seccion)) || {};
 
-        function guardarEnLocalStorage() {
-            localStorage.setItem('datosDashboardEdFisicaGeneral', JSON.stringify(datosSecciones));
-            guardarDatosRemotos();
-        }
-
-        function cargarDatosSeccionCompleta(seccion) {
-            const scriptUrl = localStorage.getItem('googleScriptUrlEdFisicaGeneral');
-            if (!scriptUrl || !navigator.onLine) return;
-
-            fetch(`${scriptUrl}?seccion=${encodeURIComponent(seccion)}`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data && data.status === 'success' && data.datos && Array.isArray(data.datos.estudiantes) && data.datos.estudiantes.length > 0) {
-                        datosSecciones[seccion] = data.datos;
-                        asegurarEstructuraSeccion(seccion);
-                        localStorage.setItem('datosDashboardEdFisicaGeneral', JSON.stringify(datosSecciones));
-                        renderRegistroDiario();
-                        renderEvaluacion();
-                    }
-                })
-                .catch(err => console.error("Error cargando sección remota:", err));
-        }
-
-        function guardarDatosRemotos() {
-            const scriptUrl = localStorage.getItem('googleScriptUrlEdFisicaGeneral');
-            if (!scriptUrl || !navigator.onLine) return;
-
-            const payload = {
-                seccion: seccionActual,
-                datos: datosSecciones[seccionActual]
-            };
-
-            fetch(scriptUrl, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            }).catch(err => console.error("Error guardando remoto:", err));
-        }
-
-        function cambiarSeccion(nuevaSeccion) {
-            seccionActual = nuevaSeccion;
-            asegurarEstructuraSeccion(seccionActual);
-            cargarDatosSeccionCompleta(seccionActual);
-            renderRegistroDiario();
-            renderEvaluacion();
-        }
-
-        function renderRegistroDiario() {
-            asegurarEstructuraSeccion(seccionActual);
-            const fecha = document.getElementById('fecha-registro').value;
-            const tbody = document.getElementById('tabla-diaria-body');
             tbody.innerHTML = '';
-
-            const estudiantes = datosSecciones[seccionActual].estudiantes;
-            const registroFecha = datosSecciones[seccionActual].registroDiario[fecha] || {};
-
-            estudiantes.forEach((est, idx) => {
-                const reg = registroFecha[est.id] || { asistencia: false, indumentaria: false, incidencia: '', estatus: 'Sin incidencia' };
-
-                let totalAsist = 0;
-                let totalInd = 0;
-                let totalDias = Object.keys(datosSecciones[seccionActual].registroDiario).length || 1;
-
-                Object.values(datosSecciones[seccionActual].registroDiario).forEach(dia => {
-                    if (dia[est.id]?.asistencia) totalAsist++;
-                    if (dia[est.id]?.indumentaria) totalInd++;
-                });
+            lista.forEach((nombre, i) => {
+                const num = i + 1;
+                const d = guardados[num] || { asistencia: false, indumentaria: false, incidencia: '', estatus: 'Sin incidencia' };
 
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50 transition";
                 tr.innerHTML = `
-                    <td class="p-3 text-center text-xs font-bold text-slate-400">${idx + 1}</td>
-                    <td class="p-3 font-semibold text-slate-700">${est.nombre}</td>
-                    <td class="p-3 text-center">
-                        <input type="checkbox" ${reg.asistencia ? 'checked' : ''} onchange="actualizarRegistro('${fecha}', '${est.id}', 'asistencia', this.checked)" class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
-                    </td>
-                    <td class="p-3 text-center">
-                        <input type="checkbox" ${reg.indumentaria ? 'checked' : ''} onchange="actualizarRegistro('${fecha}', '${est.id}', 'indumentaria', this.checked)" class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
-                    </td>
-                    <td class="p-3">
-                        <input type="text" value="${reg.incidencia || ''}" onchange="actualizarRegistro('${fecha}', '${est.id}', 'incidencia', this.value)" placeholder="Incidencia..." class="w-full border rounded px-2 py-1 text-xs focus:ring-1 focus:ring-emerald-500">
-                    </td>
-                    <td class="p-3">
-                        <select onchange="actualizarRegistro('${fecha}', '${est.id}', 'estatus', this.value)" class="w-full border rounded px-2 py-1 text-xs focus:ring-1 focus:ring-emerald-500">
-                            <option value="Sin incidencia" ${reg.estatus === 'Sin incidencia' ? 'selected' : ''}>Sin incidencia</option>
-                            <option value="Justificado" ${reg.estatus === 'Justificado' ? 'selected' : ''}>Justificado</option>
-                            <option value="Observación" ${reg.estatus === 'Observación' ? 'selected' : ''}>Observación</option>
+                    <td>${num}</td>
+                    <td class="text-left"><strong>${nombre}</strong></td>
+                    <td><input type="checkbox" id="asist_${num}" ${d.asistencia ? 'checked' : ''}></td>
+                    <td><input type="checkbox" id="indum_${num}" ${d.indumentaria ? 'checked' : ''}></td>
+                    <td><input type="text" id="incid_${num}" class="incidencia-input" placeholder="Incidencia..." value="${d.incidencia}"></td>
+                    <td>
+                        <select id="estatus_${num}" class="estatus-select">
+                            <option value="Sin incidencia" ${d.estatus === 'Sin incidencia' ? 'selected' : ''}>Sin incidencia</option>
+                            <option value="Justificado" ${d.estatus === 'Justificado' ? 'selected' : ''}>Justificado</option>
+                            <option value="Observación" ${d.estatus === 'Observación' ? 'selected' : ''}>Observación</option>
                         </select>
                     </td>
-                    <td class="p-3 text-center text-xs font-semibold text-emerald-700">${totalAsist} / ${totalDias}</td>
-                    <td class="p-3 text-center text-xs font-semibold text-emerald-700">${totalInd} / ${totalDias}</td>
-                    <td class="p-3 text-center no-print">
-                        <button onclick="gestionarEstudiante('${est.id}')" class="text-blue-600 hover:text-blue-800 px-1"><i class="fa-solid fa-pen-to-square"></i></button>
-                        <button onclick="eliminarEstudiante('${est.id}')" class="text-red-600 hover:text-red-800 px-1"><i class="fa-solid fa-trash"></i></button>
+                    <td>0 / 1</td>
+                    <td>0 / 1</td>
+                    <td>
+                        <i class="fa-solid fa-pen-to-square" style="color:#1976d2; cursor:pointer;" title="Editar"></i>
+                        <i class="fa-solid fa-trash" style="color:#d32f2f; cursor:pointer; margin-left:8px;" title="Borrar"></i>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
         }
 
-        function actualizarRegistro(fecha, idEst, campo, valor) {
-            asegurarEstructuraSeccion(seccionActual);
-            if (!datosSecciones[seccionActual].registroDiario[fecha]) {
-                datosSecciones[seccionActual].registroDiario[fecha] = {};
-            }
-            if (!datosSecciones[seccionActual].registroDiario[fecha][idEst]) {
-                datosSecciones[seccionActual].registroDiario[fecha][idEst] = { asistencia: false, indumentaria: false, incidencia: '', estatus: 'Sin incidencia' };
-            }
+        function guardarDatos() {
+            const seccion = document.getElementById('selectSeccion').value;
+            const lista = datosSecciones[seccion] || [];
+            const fechaHoy = new Date().toISOString().split('T')[0];
+            let payload = {};
 
-            datosSecciones[seccionActual].registroDiario[fecha][idEst][campo] = valor;
-            guardarEnLocalStorage();
-            renderRegistroDiario();
-        }
-
-        function renderEvaluacion() {
-            asegurarEstructuraSeccion(seccionActual);
-            const estudiantes = datosSecciones[seccionActual].estudiantes;
-            const criterios = datosSecciones[seccionActual].evaluaciones.criterios || [];
-            const notas = datosSecciones[seccionActual].evaluaciones.notas || {};
-
-            const thead = document.getElementById('tabla-evaluacion-head');
-            const tbody = document.getElementById('tabla-evaluacion-body');
-
-            let headerHTML = `<tr><th class="p-3 w-12 text-center">Nº</th><th class="p-3">Estudiante</th>`;
-            criterios.forEach(crit => {
-                headerHTML += `<th class="p-3 text-center">${crit.nombre}<br><span class="text-[9px] text-slate-400">(${crit.porcentaje}%)</span></th>`;
+            lista.forEach((nombre, i) => {
+                const num = i + 1;
+                payload[num] = {
+                    nombre: nombre,
+                    asistencia: document.getElementById('asist_' + num).checked,
+                    indumentaria: document.getElementById('indum_' + num).checked,
+                    incidencia: document.getElementById('incid_' + num).value,
+                    estatus: document.getElementById('estatus_' + num).value
+                };
             });
-            headerHTML += `<th class="p-3 text-center w-24">Nota Final</th></tr>`;
-            thead.innerHTML = headerHTML;
 
-            tbody.innerHTML = '';
-            estudiantes.forEach((est, idx) => {
-                let trHTML = `<td class="p-3 text-center text-xs font-bold text-slate-400">${idx + 1}</td><td class="p-3 font-semibold text-slate-700">${est.nombre}</td>`;
-                let notaFinal = 0;
+            // Guardar localmente en la tablet para asegurar respuesta inmediata sin internet
+            localStorage.setItem('asist_' + seccion, JSON.stringify(payload));
 
-                criterios.forEach(crit => {
-                    const notaVal = notas[est.id]?.[crit.id] || 0;
-                    notaFinal += (parseFloat(notaVal) || 0) * (parseFloat(crit.porcentaje) / 100);
-                    trHTML += `
-                        <td class="p-3 text-center">
-                            <input type="number" min="0" max="20" value="${notaVal}" onchange="guardarNota('${est.id}', '${crit.id}', this.value)" class="w-16 border rounded text-center py-1 text-xs focus:ring-1 focus:ring-blue-500">
-                        </td>
-                    `;
-                });
-
-                trHTML += `<td class="p-3 text-center font-bold text-sm text-emerald-800">${notaFinal.toFixed(1)}</td>`;
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50 transition";
-                tr.innerHTML = trHTML;
-                tbody.appendChild(tr);
+            // Enviar a Firebase (si hay internet sube directo, si estás en la cancha se guarda y sincroniza solo al conectar)
+            db.ref('asistencias/' + seccion + '/' + fechaHoy).set(payload)
+            .then(() => {
+                alert("¡Datos guardados y sincronizados correctamente!");
+            })
+            .catch(err => {
+                alert("Guardado localmente (Modo Offline activo en la cancha).");
             });
         }
 
-        function guardarNota(idEst, idCrit, valor) {
-            asegurarEstructuraSeccion(seccionActual);
-            if (!datosSecciones[seccionActual].evaluaciones.notas[idEst]) {
-                datosSecciones[seccionActual].evaluaciones.notas[idEst] = {};
-            }
-            datosSecciones[seccionActual].evaluaciones.notas[idEst][idCrit] = parseFloat(valor) || 0;
-            guardarEnLocalStorage();
-            renderEvaluacion();
-        }
-
-        function abrirModalCriterios() {
-            asegurarEstructuraSeccion(seccionActual);
-            const criterios = datosSecciones[seccionActual].evaluaciones.criterios || [];
-            const contenedor = document.getElementById('contenedor-criterios');
-            contenedor.innerHTML = '';
-
-            if (criterios.length === 0) {
-                agregarFilaCriterio();
-            } else {
-                criterios.forEach(c => agregarFilaCriterio(c.nombre, c.porcentaje));
-            }
-            openModal('modal-criterios');
-        }
-
-        function agregarFilaCriterio(nombre = '', porcentaje = '') {
-            const contenedor = document.getElementById('contenedor-criterios');
-            const div = document.createElement('div');
-            div.className = "flex items-center gap-2 modal-criterio-row";
-            div.innerHTML = `
-                <input type="text" value="${nombre}" placeholder="Ej: Servicio Voleibol" class="crit-nombre flex-grow border rounded p-1.5 text-xs focus:ring-1 focus:ring-blue-500">
-                <input type="number" value="${porcentaje}" placeholder="%" class="crit-porcentaje w-16 border rounded p-1.5 text-xs text-center focus:ring-1 focus:ring-blue-500">
-                <button onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-700 text-xs px-1"><i class="fa-solid fa-trash"></i></button>
-            `;
-            contenedor.appendChild(div);
-        }
-
-        function guardarCriterios() {
-            asegurarEstructuraSeccion(seccionActual);
-            const filas = document.querySelectorAll('.modal-criterio-row');
-            const nuevosCriterios = [];
-
-            filas.forEach((fila, i) => {
-                const nombre = fila.querySelector('.crit-nombre').value.trim();
-                const porcentaje = parseFloat(fila.querySelector('.crit-porcentaje').value) || 0;
-                if (nombre) {
-                    nuevosCriterios.push({ id: 'crit_' + (i + 1), nombre, porcentaje });
-                }
-            });
-
-            datosSecciones[seccionActual].evaluaciones.criterios = nuevosCriterios;
-            guardarEnLocalStorage();
-            closeModal('modal-criterios');
-            renderEvaluacion();
-        }
-
-        function cambiarFecha(dias) {
-            const input = document.getElementById('fecha-registro');
-            const actual = new Date(input.value);
-            actual.setDate(actual.getDate() + dias);
-            input.value = actual.toISOString().split('T')[0];
-            renderRegistroDiario();
-        }
-
-        function switchTab(tab) {
-            if (tab === 'diario') {
-                document.getElementById('tab-diario').classList.remove('hidden');
-                document.getElementById('tab-evaluacion').classList.add('hidden');
-                document.getElementById('btn-tab-diario').className = 'px-4 py-1.5 rounded-md text-sm font-medium transition active-tab bg-white text-emerald-900 shadow';
-                document.getElementById('btn-tab-evaluacion').className = 'px-4 py-1.5 rounded-md text-sm font-medium transition text-emerald-100 hover:bg-emerald-700/50';
-            } else {
-                document.getElementById('tab-diario').classList.add('hidden');
-                document.getElementById('tab-evaluacion').classList.remove('hidden');
-                document.getElementById('btn-tab-evaluacion').className = 'px-4 py-1.5 rounded-md text-sm font-medium transition active-tab bg-white text-emerald-900 shadow';
-                document.getElementById('btn-tab-diario').className = 'px-4 py-1.5 rounded-md text-sm font-medium transition text-emerald-100 hover:bg-emerald-700/50';
-            }
-        }
-
-        function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
-        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
-
-        function guardarUrlScript() {
-            const url = document.getElementById('input-script-url').value.trim();
-            localStorage.setItem('googleScriptUrlEdFisicaGeneral', url);
-            closeModal('modal-config-script');
-            cargarDatosSeccionCompleta(seccionActual);
-        }
-
-        function procesarIngresoMasivo() {
-            const texto = document.getElementById('texto-masivo').value;
-            const lineas = texto.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-            asegurarEstructuraSeccion(seccionActual);
-
-            let agregados = 0;
-            lineas.forEach(nombre => {
-                const id = 'est_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-                datosSecciones[seccionActual].estudiantes.push({ id, nombre });
-                agregados++;
-            });
-
-            guardarEnLocalStorage();
-            closeModal('modal-masivo');
-            document.getElementById('texto-masivo').value = '';
-            renderRegistroDiario();
-            renderEvaluacion();
-            alert(`Se agregaron ${agregados} estudiantes a la sección ${seccionActual}`);
-        }
-
-        function abrirModalEstudiante() {
-            document.getElementById('modal-estudiante-titulo').innerText = "Agregar Estudiante";
-            document.getElementById('edit-estudiante-id').value = "";
-            document.getElementById('nuevo-nombre-estudiante').value = "";
-            openModal('modal-estudiante');
-        }
-
-        function gestionarEstudiante(id) {
-            asegurarEstructuraSeccion(seccionActual);
-            const est = datosSecciones[seccionActual].estudiantes.find(e => e.id === id);
-            if (!est) return;
-
-            document.getElementById('modal-estudiante-titulo').innerText = "Modificar Estudiante";
-            document.getElementById('edit-estudiante-id').value = est.id;
-            document.getElementById('nuevo-nombre-estudiante').value = est.nombre;
-            openModal('modal-estudiante');
-        }
-
-        function guardarEstudiante() {
-            const id = document.getElementById('edit-estudiante-id').value;
-            const nombre = document.getElementById('nuevo-nombre-estudiante').value.trim();
-            if (!nombre) return;
-
-            asegurarEstructuraSeccion(seccionActual);
-            if (id) {
-                const est = datosSecciones[seccionActual].estudiantes.find(e => e.id === id);
-                if (est) est.nombre = nombre;
-            } else {
-                const nuevoId = 'est_' + Date.now();
-                datosSecciones[seccionActual].estudiantes.push({ id: nuevoId, nombre });
-            }
-
-            guardarEnLocalStorage();
-            closeModal('modal-estudiante');
-            renderRegistroDiario();
-            renderEvaluacion();
-        }
-
-        function eliminarEstudiante(id) {
-            asegurarEstructuraSeccion(seccionActual);
-            const est = datosSecciones[seccionActual].estudiantes.find(e => e.id === id);
-            if (!est) return;
-
-            if (confirm(`¿Confirmas eliminar a "${est.nombre}"?`)) {
-                datosSecciones[seccionActual].estudiantes = datosSecciones[seccionActual].estudiantes.filter(e => e.id !== id);
-                guardarEnLocalStorage();
-                renderRegistroDiario();
-                renderEvaluacion();
-            }
-        }
-
-        function descargarReporteDiaPDF() {
-            window.print();
-        }
+        // Cargar al iniciar
+        renderizarTabla();
     </script>
 </body>
 </html>
