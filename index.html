@@ -257,7 +257,11 @@
 
         function guardarEnLocalStorage() {
             localStorage.setItem('datosDashboardEdFisicaGeneral', JSON.stringify(datosSecciones));
-            guardarDatos({ accion: 'guardarSeccion', seccion: seccionActual, datos: datosSecciones[seccionActual] });
+            guardarDatos({ 
+                accion: 'guardarSeccion', 
+                seccion: seccionActual, 
+                datos: datosSecciones[seccionActual] 
+            });
         }
 
         function verificarConexion() {
@@ -443,8 +447,12 @@
             let sec = datosSecciones[seccionActual];
             if(!sec.registroDiario[fecha]) sec.registroDiario[fecha] = {};
             if(!sec.registroDiario[fecha][estId]) sec.registroDiario[fecha][estId] = { asistencia: false, indumentaria: false, incidencia: '', estatus: 'Sin incidencia' };
+            
             sec.registroDiario[fecha][estId][campo] = valor;
+            
+            // Forzar guardado local y sincronización remota
             guardarEnLocalStorage();
+
             if(campo === 'asistencia' || campo === 'indumentaria') renderRegistroDiario();
         }
 
