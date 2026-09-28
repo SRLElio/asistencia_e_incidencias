@@ -5,33 +5,48 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard General - Educación Física (1ro a 3ro ABC)</title>
     
-    <!-- PWA Manifest -->
+    <!-- PWA Manifest y Estilos Offline -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#00695c">
     
-    <!-- FontAwesome y Estilos -->
+    <!-- FontAwesome y Estilos de tu Interfaz -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --primary-color: #00695c;
             --accent-purple: #673ab7;
             --bg-light: #f4f7f6;
+            --border-color: #e0e0e0;
         }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-light); margin: 0; padding: 0; }
+        
+        /* NAVBAR */
         .navbar { background-color: var(--primary-color); color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
         .navbar h1 { margin: 0; font-size: 1.2rem; display: flex; align-items: center; gap: 10px; }
+        .nav-controls { display: flex; align-items: center; gap: 15px; }
+        .nav-controls select { padding: 5px; border-radius: 4px; background: #004d40; color: white; border: 1px solid #004d40; font-weight: bold; }
+        .nav-tabs { display: flex; gap: 8px; }
+        .nav-tabs button { background: rgba(255,255,255,0.2); color: white; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        .nav-tabs button.active { background: white; color: var(--primary-color); }
+
         .container { padding: 20px; }
+        
+        /* TOOLBAR */
         .toolbar { background: white; padding: 15px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .btn { padding: 8px 15px; border: none; border-radius: 4px; color: white; cursor: pointer; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px; }
+        .btn { padding: 8px 15px; border: none; border-radius: 4px; color: white; cursor: pointer; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px; font-weight: bold; }
         .btn-purple { background-color: var(--accent-purple); }
+        .btn-purple:hover { background-color: #5e35b1; }
+        
+        /* TABLA */
         .table-container { background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        th, td { padding: 12px 15px; text-align: center; border-bottom: 1px solid #e0e0e0; }
+        th, td { padding: 12px 15px; text-align: center; border-bottom: 1px solid var(--border-color); }
         th { color: #666; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; background: #fafafa; }
         td.text-left { text-align: left; }
-        input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
-        .incidencia-input { width: 90%; padding: 5px; border: 1px solid #ddd; border-radius: 4px; }
-        .estatus-select { padding: 5px; border: 1px solid #ddd; border-radius: 4px; }
+        
+        input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary-color); }
+        .incidencia-input { width: 90%; padding: 6px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.85rem; }
+        .estatus-select { padding: 6px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.85rem; background: white; }
     </style>
 </head>
 <body>
@@ -40,13 +55,24 @@
     <div class="navbar">
         <div>
             <h1><i class="fa-solid fa-person-running"></i> Dashboard Educación Física</h1>
-            <div id="statusConexion" style="font-size: 0.8rem; color: #a7ffeb;">● Verificando conexión...</div>
+            <div id="statusConexion" style="font-size: 0.8rem; color: #a7ffeb; margin-top: 3px;">● Verificando conexión...</div>
         </div>
-        <div>
-            <label style="font-size: 0.85rem;">SECCIÓN:</label>
-            <select id="selectSeccion" onchange="cambiarSeccion()" style="padding: 5px; border-radius: 4px;">
-                <option value="1B">1er Año "B"</option>
+        <div class="nav-controls">
+            <div class="nav-tabs">
+                <button id="tabAsistencia" class="active" onclick="cambiarVista('asistencia')">Registro Diario</button>
+                <button id="tabEvaluacion" onclick="cambiarVista('evaluacion')">Evaluación y Notas</button>
+            </div>
+            <label style="font-size: 0.85rem; font-weight: 600;">SECCIÓN:</label>
+            <select id="selectSeccion" onchange="renderizarTabla()">
                 <option value="1A">1er Año "A"</option>
+                <option value="1B" selected>1er Año "B"</option>
+                <option value="1C">1er Año "C"</option>
+                <option value="2A">2do Año "A"</option>
+                <option value="2B">2do Año "B"</option>
+                <option value="2C">2do Año "C"</option>
+                <option value="3A">3er Año "A"</option>
+                <option value="3B">3er Año "B"</option>
+                <option value="3C">3er Año "C"</option>
             </select>
         </div>
     </div>
@@ -55,33 +81,18 @@
         <!-- TOOLBAR -->
         <div class="toolbar">
             <div>
-                <h2 style="margin:0; font-size: 1.1rem;">Registro Diario de Clase</h2>
-                <p style="margin: 5px 0 0 0; font-size: 0.85rem; color: #666;">Gestiona asistencia, indumentaria e incidencias.</p>
+                <h2 id="tituloSeccionModulo" style="margin:0; font-size: 1.1rem; color: #333;">Registro Diario de Clase</h2>
+                <p id="subtituloModulo" style="margin: 5px 0 0 0; font-size: 0.85rem; color: #666;">Gestiona asistencia, indumentaria e incidencias por cada sección.</p>
             </div>
             <div>
                 <button class="btn btn-purple" onclick="guardarDatos()"><i class="fa-solid fa-floppy-disk"></i> Descargar Día</button>
             </div>
         </div>
 
-        <!-- TABLA -->
+        <!-- CONTENEDOR DE TABLA (Dinámico según la pestaña seleccionada) -->
         <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Nº</th>
-                        <th class="text-left">ESTUDIANTE</th>
-                        <th>ASISTENCIA (Día)</th>
-                        <th>INDUMENTARIA</th>
-                        <th>INCIDENCIA DEL ESTUDIANTE</th>
-                        <th>ESTATUS</th>
-                        <th>TOTAL ASISTENCIAS</th>
-                        <th>TOTAL INDUMENTARIA</th>
-                        <th>ACCIÓN</th>
-                    </tr>
-                </thead>
-                <tbody id="tablaBody">
-                    <!-- Se llena dinámicamente -->
-                </tbody>
+            <table id="tablaPrincipal">
+                <!-- Se llena dinámicamente con JS -->
             </table>
         </div>
     </div>
@@ -91,7 +102,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <script>
-        // CONFIGURACIÓN DE FIREBASE
+        // CONFIGURACIÓN OFICIAL DE FIREBASE
         const firebaseConfig = {
             apiKey: "AIzaSyAANlQ-ENyfm9ciNbQORdULTgYeCq_ibj4",
             authDomain: "asist-eval-educ-fisica.firebaseapp.com",
@@ -111,20 +122,21 @@
             navigator.serviceWorker.register('sw.js').catch(err => console.error("Error SW:", err));
         }
 
-        // Indicador de conexión en tiempo real
+        // Monitor de estado de conexión en tiempo real
         const statusDiv = document.getElementById('statusConexion');
         db.ref(".info/connected").on("value", (snap) => {
             if (snap.val() === true) {
                 statusDiv.innerHTML = '● Conectado (Sincronización Automática)';
                 statusDiv.style.color = '#a7ffeb';
             } else {
-                statusDiv.innerHTML = '● Modo Offline (Cancha)';
+                statusDiv.innerHTML = '● Modo Offline (Cancha - Guardado local)';
                 statusDiv.style.color = '#ffb74d';
             }
         });
 
-        // Listas de estudiantes por sección
+        // Base de datos de estudiantes estructurada para todas las secciones (1°, 2° y 3° en A, B y C)
         const datosSecciones = {
+            "1A": ["ESTUDIANTE 1A - 1", "ESTUDIANTE 1A - 2"],
             "1B": [
                 "ALVAREZ BERTORELLI, PIERINA VALENTINA",
                 "ALVAREZ PATERNINA, AARON EZEQUIEL",
@@ -137,85 +149,171 @@
                 "GONZÁLEZ ANZOLA, KAMILA VALENTINA",
                 "GONZALEZ AZUAJE, SOFIA MARGARITA"
             ],
-            "1A": [
-                "ESTUDIANTE EJEMPLO 1",
-                "ESTUDIANTE EJEMPLO 2"
-            ]
+            "1C": ["ESTUDIANTE 1C - 1"],
+            "2A": ["ESTUDIANTE 2A - 1"],
+            "2B": ["ESTUDIANTE 2B - 1"],
+            "2C": ["ESTUDIANTE 2C - 1"],
+            "3A": ["ESTUDIANTE 3A - 1"],
+            "3B": ["ESTUDIANTE 3B - 1"],
+            "3C": ["ESTUDIANTE 3C - 1"]
         };
 
-        function cambiarSeccion() {
+        let vistaActual = 'asistencia'; // 'asistencia' o 'evaluacion'
+
+        function cambiarVista(vista) {
+            vistaActual = vista;
+            document.getElementById('tabAsistencia').classList.toggle('active', vista === 'asistencia');
+            document.getElementById('tabEvaluacion').classList.toggle('active', vista === 'evaluacion');
+            
+            if (vista === 'asistencia') {
+                document.getElementById('tituloSeccionModulo').innerText = "Registro Diario de Clase";
+                document.getElementById('subtituloModulo').innerText = "Gestiona asistencia, indumentaria e incidencias por cada sección.";
+            } else {
+                document.getElementById('tituloSeccionModulo').innerText = "Módulo de Evaluaciones y Notas";
+                document.getElementById('subtituloModulo').innerText = "Califica criterios y evalúa el rendimiento por sección.";
+            }
             renderizarTabla();
         }
 
         function renderizarTabla() {
             const seccion = document.getElementById('selectSeccion').value;
             const lista = datosSecciones[seccion] || [];
-            const tbody = document.getElementById('tablaBody');
+            const tabla = document.getElementById('tablaPrincipal');
             
-            // Cargar datos guardados previamente de la tablet
             const guardados = JSON.parse(localStorage.getItem('asist_' + seccion)) || {};
+            const notasGuardadas = JSON.parse(localStorage.getItem('notas_' + seccion)) || {};
 
-            tbody.innerHTML = '';
-            lista.forEach((nombre, i) => {
-                const num = i + 1;
-                const d = guardados[num] || { asistencia: false, indumentaria: false, incidencia: '', estatus: 'Sin incidencia' };
+            tabla.innerHTML = '';
 
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${num}</td>
-                    <td class="text-left"><strong>${nombre}</strong></td>
-                    <td><input type="checkbox" id="asist_${num}" ${d.asistencia ? 'checked' : ''}></td>
-                    <td><input type="checkbox" id="indum_${num}" ${d.indumentaria ? 'checked' : ''}></td>
-                    <td><input type="text" id="incid_${num}" class="incidencia-input" placeholder="Incidencia..." value="${d.incidencia}"></td>
-                    <td>
-                        <select id="estatus_${num}" class="estatus-select">
-                            <option value="Sin incidencia" ${d.estatus === 'Sin incidencia' ? 'selected' : ''}>Sin incidencia</option>
-                            <option value="Justificado" ${d.estatus === 'Justificado' ? 'selected' : ''}>Justificado</option>
-                            <option value="Observación" ${d.estatus === 'Observación' ? 'selected' : ''}>Observación</option>
-                        </select>
-                    </td>
-                    <td>0 / 1</td>
-                    <td>0 / 1</td>
-                    <td>
-                        <i class="fa-solid fa-pen-to-square" style="color:#1976d2; cursor:pointer;" title="Editar"></i>
-                        <i class="fa-solid fa-trash" style="color:#d32f2f; cursor:pointer; margin-left:8px;" title="Borrar"></i>
-                    </td>
+            if (vistaActual === 'asistencia') {
+                // Cabecera Asistencia
+                tabla.innerHTML = `
+                    <thead>
+                        <tr>
+                            <th>Nº</th>
+                            <th class="text-left">ESTUDIANTE</th>
+                            <th>ASISTENCIA (DÍA)</th>
+                            <th>INDUMENTARIA</th>
+                            <th>INCIDENCIA DEL ESTUDIANTE</th>
+                            <th>ESTATUS</th>
+                            <th>TOTAL ASISTENCIAS</th>
+                            <th>TOTAL INDUMENTARIA</th>
+                            <th>ACCIÓN</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaBody"></tbody>
                 `;
-                tbody.appendChild(tr);
-            });
+                const tbody = document.getElementById('tablaBody');
+                lista.forEach((nombre, i) => {
+                    const num = i + 1;
+                    const d = guardados[num] || { asistencia: false, indumentaria: false, incidencia: '', estatus: 'Sin incidencia' };
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${num}</td>
+                        <td class="text-left"><strong>${nombre}</strong></td>
+                        <td><input type="checkbox" id="asist_${num}" ${d.asistencia ? 'checked' : ''}></td>
+                        <td><input type="checkbox" id="indum_${num}" ${d.indumentaria ? 'checked' : ''}></td>
+                        <td><input type="text" id="incid_${num}" class="incidencia-input" placeholder="Incidencia..." value="${d.incidencia}"></td>
+                        <td>
+                            <select id="estatus_${num}" class="estatus-select">
+                                <option value="Sin incidencia" ${d.estatus === 'Sin incidencia' ? 'selected' : ''}>Sin incidencia</option>
+                                <option value="Justificado" ${d.estatus === 'Justificado' ? 'selected' : ''}>Justificado</option>
+                                <option value="Observación" ${d.estatus === 'Observación' ? 'selected' : ''}>Observación</option>
+                            </select>
+                        </td>
+                        <td>0 / 1</td>
+                        <td>0 / 1</td>
+                        <td>
+                            <i class="fa-solid fa-pen-to-square" style="color:#1976d2; cursor:pointer;" title="Editar"></i>
+                            <i class="fa-solid fa-trash" style="color:#d32f2f; cursor:pointer; margin-left:8px;" title="Borrar"></i>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } else {
+                // Cabecera Evaluaciones y Notas
+                tabla.innerHTML = `
+                    <thead>
+                        <tr>
+                            <th>Nº</th>
+                            <th class="text-left">ESTUDIANTE</th>
+                            <th>CRITERIO 1 (Servicio Voleibol)</th>
+                            <th>CRITERIO 2 (Destreza)</th>
+                            <th>NOTA FINAL</th>
+                            <th>ACCIÓN</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaBodyNotas"></tbody>
+                `;
+                const tbodyNotas = document.getElementById('tablaBodyNotas');
+                lista.forEach((nombre, i) => {
+                    const num = i + 1;
+                    const n = notasGuardadas[num] || { crit1: '', crit2: '', notaFinal: '' };
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${num}</td>
+                        <td class="text-left"><strong>${nombre}</strong></td>
+                        <td><input type="number" id="crit1_${num}" class="incidencia-input" style="width:70px;" min="0" max="20" value="${n.crit1}"></td>
+                        <td><input type="number" id="crit2_${num}" class="incidencia-input" style="width:70px;" min="0" max="20" value="${n.crit2}"></td>
+                        <td><strong id="notafinal_${num}">${n.notaFinal || '-'}</strong></td>
+                        <td>
+                            <button class="btn btn-purple" style="padding:4px 8px; font-size:0.75rem;" onclick="calcularNota(${num})">Calcular</button>
+                        </td>
+                    `;
+                    tbodyNotas.appendChild(tr);
+                });
+            }
+        }
+
+        function calcularNota(num) {
+            const c1 = parseFloat(document.getElementById(`crit1_${num}`).value) || 0;
+            const c2 = parseFloat(document.getElementById(`crit2_${num}`).value) || 0;
+            const promedio = ((c1 + c2) / 2).toFixed(1);
+            document.getElementById(`notafinal_${num}`).innerText = promedio;
         }
 
         function guardarDatos() {
             const seccion = document.getElementById('selectSeccion').value;
             const lista = datosSecciones[seccion] || [];
             const fechaHoy = new Date().toISOString().split('T')[0];
-            let payload = {};
 
-            lista.forEach((nombre, i) => {
-                const num = i + 1;
-                payload[num] = {
-                    nombre: nombre,
-                    asistencia: document.getElementById('asist_' + num).checked,
-                    indumentaria: document.getElementById('indum_' + num).checked,
-                    incidencia: document.getElementById('incid_' + num).value,
-                    estatus: document.getElementById('estatus_' + num).value
-                };
-            });
-
-            // Guardar localmente en la tablet para asegurar respuesta inmediata sin internet
-            localStorage.setItem('asist_' + seccion, JSON.stringify(payload));
-
-            // Enviar a Firebase (si hay internet sube directo, si estás en la cancha se guarda y sincroniza solo al conectar)
-            db.ref('asistencias/' + seccion + '/' + fechaHoy).set(payload)
-            .then(() => {
-                alert("¡Datos guardados y sincronizados correctamente!");
-            })
-            .catch(err => {
-                alert("Guardado localmente (Modo Offline activo en la cancha).");
-            });
+            if (vistaActual === 'asistencia') {
+                let payload = {};
+                lista.forEach((nombre, i) => {
+                    const num = i + 1;
+                    payload[num] = {
+                        nombre: nombre,
+                        asistencia: document.getElementById('asist_' + num).checked,
+                        indumentaria: document.getElementById('indum_' + num).checked,
+                        incidencia: document.getElementById('incid_' + num).value,
+                        estatus: document.getElementById('estatus_' + num).value
+                    };
+                });
+                localStorage.setItem('asist_' + seccion, JSON.stringify(payload));
+                db.ref('asistencias/' + seccion + '/' + fechaHoy).set(payload)
+                .then(() => alert("¡Asistencia guardada y sincronizada con Firebase!"))
+                .catch(() => alert("Guardado en la tablet (Modo Offline activo)."));
+            } else {
+                let payloadNotas = {};
+                lista.forEach((nombre, i) => {
+                    const num = i + 1;
+                    payloadNotas[num] = {
+                        nombre: nombre,
+                        crit1: document.getElementById('crit1_' + num).value,
+                        crit2: document.getElementById('crit2_' + num).value,
+                        notaFinal: document.getElementById('notafinal_' num ? `notafinal_${num}` : '').innerText
+                    };
+                });
+                localStorage.setItem('notas_' + seccion, JSON.stringify(payloadNotas));
+                db.ref('evaluaciones/' + seccion).set(payloadNotas)
+                .then(() => alert("¡Notas guardadas y sincronizadas con Firebase!"))
+                .catch(() => alert("Notas guardadas localmente en la tablet."));
+            }
         }
 
-        // Cargar al iniciar
+        // Inicializar al cargar
         renderizarTabla();
     </script>
 </body>
