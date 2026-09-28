@@ -211,7 +211,7 @@
     </div>
 
     <script>
-        let seccionActual = '1B';
+        let seccionActual = '1A';
         const estructurasBasicas = {
             '1A': { estudiantes: [], actividades: [], registroDiario: {}, calificaciones: {} },
             '1B': { estudiantes: [], actividades: [], registroDiario: {}, calificaciones: {} },
@@ -226,7 +226,7 @@
 
         let datosSecciones = JSON.parse(localStorage.getItem('datosDashboardEdFisicaGeneral')) || estructurasBasicas;
 
-        // Validar y reparar estructuras si faltan
+        // Validar e inicializar la estructura local
         Object.keys(estructurasBasicas).forEach(sec => {
             if (!datosSecciones[sec]) datosSecciones[sec] = estructurasBasicas[sec];
             if (!datosSecciones[sec].estudiantes) datosSecciones[sec].estudiantes = [];
@@ -251,12 +251,13 @@
             if (nuevaUrl !== null) {
                 localStorage.setItem('googleScriptUrlEdFisicaGeneral', nuevaUrl.trim());
                 alert("¡Enlace guardado con éxito!");
+                cargarDatosSeccionCompleta(seccionActual);
             }
         }
 
         function guardarEnLocalStorage() {
             localStorage.setItem('datosDashboardEdFisicaGeneral', JSON.stringify(datosSecciones));
-            guardarDatos({ seccion: seccionActual, datos: datosSecciones[seccionActual] });
+            guardarDatos({ accion: 'guardarSeccion', seccion: seccionActual, datos: datosSecciones[seccionActual] });
         }
 
         function verificarConexion() {
@@ -300,9 +301,27 @@
             Promise.all(pendientes.map(item => enviarAGoogleSheets(item)))
                 .then(() => {
                     localStorage.removeItem('cola_offline');
-                    alert("¡Conexión restablecida! Todas las notas tomadas offline se sincronizaron con Google Sheets.");
+                    alert("¡Conexión restablecida! Los datos guardados offline se sincronizaron con Google Sheets.");
                 })
                 .catch(err => console.error("Error al sincronizar pendientes:", err));
+        }
+
+        function cargarDatosSeccionCompleta(seccion) {
+            const scriptUrl = localStorage.getItem('googleScriptUrlEdFisicaGeneral');
+            if (!scriptUrl || !navigator.onLine) return;
+
+            fetch(`${scriptUrl}?seccion=${seccion}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.status === 'success' && data.datos) {
+                        datosSecciones[seccion] = data.datos;
+                        asegurarEstructuraSeccion(seccion);
+                        localStorage.setItem('datosDashboardEdFisicaGeneral', JSON.stringify(datosSecciones));
+                        renderRegistroDiario();
+                        renderEvaluacion();
+                    }
+                })
+                .catch(err => console.error("Error al cargar datos remotos:", err));
         }
 
         window.addEventListener('online', sincronizarPendientes);
@@ -326,6 +345,7 @@
             document.getElementById('select-seccion').value = nuevaSeccion;
             renderRegistroDiario();
             renderEvaluacion();
+            cargarDatosSeccionCompleta(seccionActual);
         }
 
         function switchTab(tabId) {
@@ -750,6 +770,7 @@
 
         // Carga inicial
         renderRegistroDiario();
+        cargarDatosSeccionCompleta(seccionActual);
     </script>
 </body>
 </html>
